@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/**
+ * Minimal set for Day 1–2:
+ * Waves → Ripples → MicroActions (with Wave-scoped buckets).
+ * We’ll add Users, ActionLogs, etc. later.
+ */
+
+model Wave {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  description  String
+  icon         String?
+  impactCoef   Float    // actions × coef = impact value
+  impactUnit   String   // e.g., "stigma index points" or "kg"
+  impactSource String   // e.g., "WHO 2024"
+  // optional: JSON config for allowed buckets/weights (kept simple as string for now)
+  allowedBuckets String // comma-separated list, e.g., "conversation_checkin,share_resources,self_care_moment"
+
+  ripples      Ripple[]
+}
+
+model Ripple {
+  id             String   @id @default(cuid())
+  waveId         String
+  title          String
+  description    String?
+  createdBy      String   @default("system")
+  status         String   @default("active")
+
+  // Context for Stories
+  audience_noun  String?  // e.g., "coworkers"
+  context_label  String?  // e.g., "at work"
+  blurb_template String?  // optional preformatted
+  default_bucket String?  // fallback bucket
+
+  wave           Wave     @relation(fields: [waveId], references: [id])
+  microActions   MicroAction[]
+
+  @@index([waveId])
+}
+
+model MicroAction {
+  id         String  @id @default(cuid())
+  rippleId   String
+  text       String
+  difficulty Int     @default(1)
+  bucket     String  // must be in Wave.allowedBuckets at runtime
+  status     String  @default("active")
+  createdBy  String  @default("system")
+
+  ripple     Ripple  @relation(fields: [rippleId], references: [id])
+
+  @@index([rippleId])
+}

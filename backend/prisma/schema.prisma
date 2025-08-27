@@ -7,24 +7,63 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/**
- * Minimal set for Day 1–2:
- * Waves → Ripples → MicroActions (with Wave-scoped buckets).
- * We’ll add Users, ActionLogs, etc. later.
- */
+/* ---------- Core models ---------- */
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  passwordHash String
+  createdAt    DateTime     @default(now())
+
+  // 1:1 with Dream (FK lives on Dream)
+  dream        Dream?       @relation("UserToDream")
+
+  // 1:N memberships
+  memberships  UserRipple[] @relation("UserToMemberships")
+}
+
+model Dream {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  waveId    String
+  title     String
+  createdAt DateTime @default(now())
+
+  // explicit relation names avoid ambiguity
+  user      User     @relation("UserToDream", fields: [userId], references: [id])
+  wave      Wave     @relation("WaveToDreams", fields: [waveId], references: [id])
+
+  @@index([waveId])
+}
 
 model Wave {
-  id           String   @id @default(cuid())
-  name         String   @unique
-  description  String
-  icon         String?
-  impactCoef   Float    // actions × coef = impact value
-  impactUnit   String   // e.g., "stigma index points" or "kg"
-  impactSource String   // e.g., "WHO 2024"
-  // optional: JSON config for allowed buckets/weights (kept simple as string for now)
-  allowedBuckets String // comma-separated list, e.g., "conversation_checkin,share_resources,self_care_moment"
+  id             String   @id @default(cuid())
+  name           String   @unique
+  description    String
+  icon           String?
+  impactCoef     Float
+  impactUnit     String
+  impactSource   String
+  allowedBuckets String   // comma-separated list
 
-  ripples      Ripple[]
+  ripples        Ripple[] @relation("WaveToRipples")
+  dreams         Dream[]  @relation("WaveToDreams")
+}
+
+model UserRipple {
+  id        String   @id @default(cuid())
+  userId    String
+  rippleId  String
+  isActive  Boolean  @default(true)
+  isPrimary Boolean  @default(false)
+  joinedAt  DateTime @default(now())
+
+  // name the relations explicitly
+  user      User     @relation("UserToMemberships", fields: [userId], references: [id])
+  ripple    Ripple   @relation("RippleToMemberships", fields: [rippleId], references: [id])
+
+  @@unique([userId, rippleId])
+  @@index([userId, isPrimary])
 }
 
 model Ripple {
@@ -34,15 +73,19 @@ model Ripple {
   description    String?
   createdBy      String   @default("system")
   status         String   @default("active")
+  isStarter      Boolean  @default(false)
 
   // Context for Stories
-  audience_noun  String?  // e.g., "coworkers"
-  context_label  String?  // e.g., "at work"
-  blurb_template String?  // optional preformatted
-  default_bucket String?  // fallback bucket
+  audience_noun  String?
+  context_label  String?
+  blurb_template String?
+  default_bucket String?
 
-  wave           Wave     @relation(fields: [waveId], references: [id])
+  wave           Wave     @relation("WaveToRipples", fields: [waveId], references: [id])
+
+  // back-relations (help Prisma disambiguate)
   microActions   MicroAction[]
+  memberships    UserRipple[] @relation("RippleToMemberships")
 
   @@index([waveId])
 }
@@ -51,8 +94,7 @@ model MicroAction {
   id         String  @id @default(cuid())
   rippleId   String
   text       String
-  difficulty Int     @default(1)
-  bucket     String  // must be in Wave.allowedBuckets at runtime
+  bucket     String
   status     String  @default("active")
   createdBy  String  @default("system")
 

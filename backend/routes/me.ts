@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../src/db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { z } from "zod";
 
 const router = Router();
 
@@ -17,7 +18,7 @@ router.get("/home", requireAuth, async (req, res) => {
   if (!primary?.ripple) {
     return res.json({
       today_action: null,
-      message: "No primary ripple yet. Set your Dream to get started.",
+      message: "No primary ripple yet. Join a wave to get started.",
     });
   }
 
@@ -48,6 +49,53 @@ router.get("/home", requireAuth, async (req, res) => {
     // Impact chip is implemented later (after ActionLogs/Impact worker)
     impact_chip: null,
   });
+});
+
+// GET /me/profile - Get user profile including dream
+router.get("/profile", requireAuth, async (req, res) => {
+  const userId = (req as any).userId as string;
+  
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      dream: true,
+      createdAt: true,
+    }
+  });
+
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  res.json(user);
+});
+
+// PUT /me/dream - Update user's dream
+const dreamSchema = z.object({
+  dream: z.string().min(1).max(500).optional(),
+});
+
+router.put("/dream", requireAuth, async (req, res) => {
+  const userId = (req as any).userId as string;
+  const parsed = dreamSchema.safeParse(req.body);
+  
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues });
+  }
+
+  const { dream } = parsed.data;
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: { dream },
+    select: {
+      id: true,
+      email: true,
+      dream: true,
+    }
+  });
+
+  res.json(updatedUser);
 });
 
 export default router;

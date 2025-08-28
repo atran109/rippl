@@ -58,27 +58,13 @@ model User {
   passwordHash String
   createdAt    DateTime @default(now())
 
-  // 1:1 with Dream (FK lives on Dream)
-  dream Dream? @relation("UserToDream")
+  // Dream is now just a profile field
+  dream String?
 
   // 1:N memberships
   memberships UserRipple[] @relation("UserToMemberships")
 
   actionLogs ActionLog[] @relation("UserToActionLogs")
-}
-
-model Dream {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  waveId    String
-  title     String
-  createdAt DateTime @default(now())
-
-  // explicit relation names avoid ambiguity
-  user User @relation("UserToDream", fields: [userId], references: [id])
-  wave Wave @relation("WaveToDreams", fields: [waveId], references: [id])
-
-  @@index([waveId])
 }
 
 model Wave {
@@ -92,7 +78,6 @@ model Wave {
   allowedBuckets String // comma-separated list
 
   ripples      Ripple[]      @relation("WaveToRipples")
-  dreams       Dream[]       @relation("WaveToDreams")
   actionLogs   ActionLog[]   @relation("WaveToActionLogs")
   waveBuckets  WaveBucket[]
   templates    Template[]    @relation("TemplateToWave")

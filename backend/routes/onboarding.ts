@@ -21,26 +21,18 @@ router.get("/waves", async (_req, res) => {
   res.json(waves);
 });
 
-const dreamSchema = z.object({
-  title: z.string().min(3),
+const joinWaveSchema = z.object({
   waveId: z.string().cuid(),
 });
 
-// POST /dream  (set or update user's dream + auto-join starter ripple)
-router.post("/dream", requireAuth, async (req, res) => {
+// POST /join-wave  (join a wave and auto-join starter ripple)
+router.post("/join-wave", requireAuth, async (req, res) => {
   const userId = (req as any).userId as string;
-  const parsed = dreamSchema.safeParse(req.body);
+  const parsed = joinWaveSchema.safeParse(req.body);
   if (!parsed.success)
     return res.status(400).json({ error: parsed.error.issues });
 
-  const { title, waveId } = parsed.data;
-
-  // upsert Dream
-  await prisma.dream.upsert({
-    where: { userId },
-    create: { userId, waveId, title },
-    update: { waveId, title },
-  });
+  const { waveId } = parsed.data;
 
   // find starter ripple in that wave (fallback: first ripple)
   let starter = await prisma.ripple.findFirst({

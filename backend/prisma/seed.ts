@@ -261,6 +261,8 @@ async function main() {
 
   // Clear existing (dev-only convenience)
   await prisma.microAction.deleteMany();
+  await prisma.template.deleteMany();
+  await prisma.waveBucket.deleteMany();
   await prisma.ripple.deleteMany();
   await prisma.wave.deleteMany();
 
@@ -276,6 +278,16 @@ async function main() {
         allowedBuckets: w.allowedBuckets.join(","),
       },
     });
+
+    // Create WaveBucket entries for this wave
+    for (const bucket of w.allowedBuckets) {
+      await prisma.waveBucket.create({
+        data: {
+          waveId: wave.id,
+          name: bucket,
+        },
+      });
+    }
 
     for (const r of w.ripples) {
       const ripple = await prisma.ripple.create({
@@ -311,11 +323,77 @@ async function main() {
       await prisma.microAction.createMany({
         data: microActions.map((m) => ({
           rippleId: ripple.id,
+          waveId: wave.id,
           text: m.text,
           bucket: m.bucket,
           status: "active",
           createdBy: "seed",
         })),
+      });
+    }
+  }
+
+  // Create some sample Templates
+  const templateData = [
+    // Mental Health templates
+    {
+      waveId: (await prisma.wave.findFirst({ where: { name: "Mental Health" } }))?.id,
+      bucket: "conversation_checkin",
+      textPattern: "Ask a {audience} how they're really doing {time}.",
+      modifiersJson: {
+        time: ["today", "before lunch", "after standup", "this afternoon"],
+        audience: ["coworker", "friend", "classmate", "roommate"]
+      }
+    },
+    {
+      waveId: (await prisma.wave.findFirst({ where: { name: "Mental Health" } }))?.id,
+      bucket: "share_resources",
+      textPattern: "Share one mental-health resource in a {channel}.",
+      modifiersJson: {
+        channel: ["Slack", "group chat", "email", "DM"]
+      }
+    },
+    // Environment templates
+    {
+      waveId: (await prisma.wave.findFirst({ where: { name: "Environment" } }))?.id,
+      bucket: "pick_up_litter",
+      textPattern: "Pick up {count} plastic {item} on your walk.",
+      modifiersJson: {
+        count: ["1", "2", "3"],
+        item: ["bottle", "cup", "wrapper", "bag"]
+      }
+    },
+    {
+      waveId: (await prisma.wave.findFirst({ where: { name: "Environment" } }))?.id,
+      bucket: "bring_reusable",
+      textPattern: "Bring a reusable {item} {context}.",
+      modifiersJson: {
+        item: ["bag", "bottle", "cup", "container"],
+        context: ["to the store", "to work", "on your walk", "for lunch"]
+      }
+    },
+    // Community templates
+    {
+      waveId: (await prisma.wave.findFirst({ where: { name: "Community & Equity" } }))?.id,
+      bucket: "conscious_purchase",
+      textPattern: "Buy {item} from a {type} business today.",
+      modifiersJson: {
+        item: ["coffee", "lunch", "groceries", "supplies"],
+        type: ["local", "BIPOC-owned", "woman-owned", "family"]
+      }
+    }
+  ];
+
+  for (const template of templateData) {
+    if (template.waveId) {
+      await prisma.template.create({
+        data: {
+          waveId: template.waveId,
+          bucket: template.bucket,
+          textPattern: template.textPattern,
+          modifiersJson: template.modifiersJson,
+          status: "active"
+        }
       });
     }
   }

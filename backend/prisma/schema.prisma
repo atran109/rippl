@@ -8,8 +8,49 @@ datasource db {
 }
 
 /**
+ * ---------- Enums ----------
+ */
+
+enum TemplateStatus {
+  active
+  inactive
+  archived
+}
+
+/**
  * ---------- Core models ----------
  */
+
+model WaveBucket {
+  waveId String
+  name   String // bucket name, e.g., "conversation_checkin"
+
+  wave Wave @relation(fields: [waveId], references: [id])
+
+  // back-relations
+  templates    Template[]    @relation("TemplateToWaveBucket")
+  microActions MicroAction[] @relation("MicroActionToWaveBucket")
+
+  @@id([waveId, name]) // composite PK for FK references
+}
+
+model Template {
+  id            String         @id @default(cuid())
+  waveId        String
+  bucket        String
+  textPattern   String
+  modifiersJson Json           @default("{}")
+  status        TemplateStatus @default(active)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  // relations
+  wave         Wave          @relation("TemplateToWave", fields: [waveId], references: [id])
+  waveBucket   WaveBucket    @relation("TemplateToWaveBucket", fields: [waveId, bucket], references: [waveId, name])
+  microActions MicroAction[] @relation("TemplateToMicroAction")
+
+  @@index([waveId, bucket])
+}
 
 model User {
   id           String   @id @default(cuid())
@@ -50,9 +91,12 @@ model Wave {
   impactSource   String
   allowedBuckets String // comma-separated list
 
-  ripples    Ripple[]    @relation("WaveToRipples")
-  dreams     Dream[]     @relation("WaveToDreams")
-  actionLogs ActionLog[] @relation("WaveToActionLogs")
+  ripples      Ripple[]      @relation("WaveToRipples")
+  dreams       Dream[]       @relation("WaveToDreams")
+  actionLogs   ActionLog[]   @relation("WaveToActionLogs")
+  waveBuckets  WaveBucket[]
+  templates    Template[]    @relation("TemplateToWave")
+  microActions MicroAction[] @relation("WaveToMicroActions")
 }
 
 //a rippl that is attached to a user
@@ -134,10 +178,21 @@ model MicroAction {
   status    String @default("active")
   createdBy String @default("system")
 
+  // NEW fields for generation
+  waveId     String
+  templateId String?
+  createdAt  DateTime @default(now())
+
   ripple     Ripple      @relation(fields: [rippleId], references: [id])
+  wave       Wave        @relation("WaveToMicroActions", fields: [waveId], references: [id])
+  template   Template?   @relation("TemplateToMicroAction", fields: [templateId], references: [id])
   actionLogs ActionLog[] @relation("MicroActionToActionLogs")
 
+  // ensure bucket is valid for the wave
+  waveBucket WaveBucket @relation("MicroActionToWaveBucket", fields: [waveId, bucket], references: [waveId, name])
+
   @@index([rippleId])
+  @@index([waveId, bucket])
 }
 
 //completed micro actions

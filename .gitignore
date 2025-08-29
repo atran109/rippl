@@ -1,6 +1,7 @@
 # VS Code workspace settings
 .vscode/
 
+
 # OS generated files
 .DS_Store
 .DS_Store?
@@ -16,3 +17,7 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+#markdown for ai
+AGENTS.md
+CONTEXT.md

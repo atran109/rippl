@@ -3,4 +3,10 @@ const { withNativeWind } = require("nativewind/metro");
 
 const config = getDefaultConfig(__dirname);
 
-module.exports = withNativeWind(config, { input: "./global.css" });
+// Configure for web compatibility
+config.resolver.platforms = ["ios", "android", "native", "web"];
+
+module.exports = withNativeWind(config, { 
+  input: "./global.css",
+  inlineRem: 16
+});

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
@@ -43,7 +43,7 @@ export default function LoginScreen() {
   if (!showForm) {
     // Landing screen matching Figma design
     return (
-      <View className="flex-1 bg-gradient-to-b from-[#2AABC8] to-[#4A90E2]">
+      <View className="flex-1 bg-[#2AABC8]">
         <SafeAreaView className="flex-1">
           {/* Logo */}
           <View className="items-center mt-16 mb-32">
@@ -72,7 +72,7 @@ export default function LoginScreen() {
 
             <TouchableOpacity
               className="border-2 border-white rounded-lg py-4"
-              onPress={() => navigation.navigate('Register')}
+              onPress={() => navigation.navigate('Registration')}
             >
               <Text className="text-white text-center font-semibold text-base">
                 Sign Up
@@ -84,73 +84,79 @@ export default function LoginScreen() {
     );
   }
 
-  // Login form
+  // Login form matching Figma design
   return (
-    <View className="flex-1 bg-gradient-to-b from-[#2AABC8] to-[#4A90E2]">
+    <View className="flex-1 bg-white">
       <SafeAreaView className="flex-1">
-        {/* Header */}
-        <View className="flex-row items-center px-5 py-4">
-          <TouchableOpacity onPress={() => setShowForm(false)}>
-            <Text className="text-white text-lg">← Back</Text>
+        {/* Header with back button and logo */}
+        <View className="flex-row items-center justify-between px-5 py-[30px]">
+          <TouchableOpacity onPress={() => setShowForm(false)} className="w-[26px] h-[26px]">
+            <Text className="text-[#2AABC8] text-2xl">←</Text>
           </TouchableOpacity>
+          
+          {/* RIPPL Logo - using icon.png as fallback since SVG needs special handling */}
+          <Image
+            source={require('../../assets/icon.png')}
+            className="w-[26px] h-[26px]"
+            resizeMode="contain"
+          />
+          
+          <View className="w-[26px]" />
         </View>
 
-        <View className="flex-1 justify-center px-6">
+        <View className="flex-1 justify-center px-5">
           {/* Title */}
-          <View className="items-center mb-12">
-            <Text className="text-white text-3xl font-bold mb-2">Welcome back</Text>
-            <Text className="text-white opacity-80 text-center">Sign in to continue your rippl journey</Text>
+          <View className="items-center mb-[26px]">
+            <Text className="text-[#2AABC8] text-[23px] font-bold text-center font-['DM_Sans']">
+              Welcome Back
+            </Text>
           </View>
 
           {/* Form */}
-          <View className="space-y-6">
-            <View>
-              <Text className="text-white font-medium mb-2">Email</Text>
-              <TextInput
-                className="bg-white bg-opacity-10 border border-white border-opacity-30 rounded-lg px-4 py-4 text-white text-base"
-                value={email}
-                onChangeText={setEmail}
-                placeholder="Enter your email"
-                placeholderTextColor="rgba(255,255,255,0.6)"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-              />
-            </View>
+          <View className="gap-[15px] mb-[15px]">
+            <TextInput
+              className="bg-[#F4F4F4] p-[13px] rounded-[11px] text-[15px] font-['Inter']"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="Email/Username"
+              placeholderTextColor="#8A8A8E"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+            />
 
-            <View>
-              <Text className="text-white font-medium mb-2">Password</Text>
-              <TextInput
-                className="bg-white bg-opacity-10 border border-white border-opacity-30 rounded-lg px-4 py-4 text-white text-base"
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Enter your password"
-                placeholderTextColor="rgba(255,255,255,0.6)"
-                secureTextEntry
-                autoComplete="password"
-              />
-            </View>
+            <TextInput
+              className="bg-[#F4F4F4] p-[13px] rounded-[11px] text-[15px] font-['Inter']"
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Password"
+              placeholderTextColor="#8A8A8E"
+              secureTextEntry
+              autoComplete="password"
+            />
+          </View>
 
-            <TouchableOpacity
-              className={`rounded-lg py-4 mt-8 ${
-                loginMutation.isPending ? 'bg-white bg-opacity-50' : 'bg-white'
-              }`}
-              onPress={handleLogin}
-              disabled={loginMutation.isPending}
-            >
-              <Text className="text-[#2AABC8] text-center font-semibold text-base">
-                {loginMutation.isPending ? 'Signing in...' : 'Sign In'}
+          {/* Forgot Password */}
+          <View className="items-end mb-8">
+            <TouchableOpacity>
+              <Text className="text-[#007AFF] text-[13px] font-['Inter']">
+                Forgot Password?
               </Text>
             </TouchableOpacity>
           </View>
+        </View>
 
-          {/* Sign up link */}
-          <View className="flex-row justify-center mt-8">
-            <Text className="text-white opacity-80">Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text className="text-white font-semibold">Sign up</Text>
-            </TouchableOpacity>
-          </View>
+        {/* Bottom Action Button */}
+        <View className="px-5 pb-8">
+          <TouchableOpacity
+            className="bg-[#2AABC8] py-[13px] rounded-[10px] items-center justify-center"
+            onPress={handleLogin}
+            disabled={loginMutation.isPending}
+          >
+            <Text className="text-white text-[14px] font-semibold font-['Inter']">
+              {loginMutation.isPending ? 'Signing in...' : 'Sign In'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     </View>

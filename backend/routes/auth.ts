@@ -39,10 +39,14 @@ router.post("/register", async (req, res) => {
     data: { email, username, passwordHash } 
   });
 
+  // Generate JWT token for automatic login
+  const token = jwt.sign({ sub: user.id }, env.JWT_SECRET, { expiresIn: "7d" });
+
   res.status(201).json({ 
     id: user.id, 
     email: user.email, 
-    username: user.username 
+    username: user.username,
+    token
   });
 });
 

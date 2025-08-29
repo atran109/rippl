@@ -53,6 +53,7 @@ export const RegisterResponseSchema = z.object({
   id: z.string(),
   email: z.string(),
   username: z.string(),
+  token: z.string(),
 });
 
 export const JoinWaveResponseSchema = z.object({

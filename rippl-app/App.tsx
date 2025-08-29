@@ -10,10 +10,9 @@ import { Text, View } from 'react-native';
 import { RootStackParamList } from './src/types/navigation';
 import { getToken } from './src/lib/api';
 
-// Import screens (we'll create these next)
+// Import screens
 import LoginScreen from './src/screens/LoginScreen';
-import RegisterScreen from './src/screens/RegisterScreen';
-import HomeScreen from './src/screens/HomeScreen';
+import RegistrationScreen from './src/screens/RegistrationScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const queryClient = new QueryClient();
@@ -50,16 +49,24 @@ export default function App() {
             }}
           >
             {isAuthenticated ? (
-              // Authenticated stack
+              // Authenticated stack - placeholder for now
               <>
-                <Stack.Screen name="Home" component={HomeScreen} />
+                <Stack.Screen 
+                  name="Main" 
+                  component={() => (
+                    <View className="flex-1 bg-white items-center justify-center">
+                      <Text className="text-2xl text-gray-800">Welcome to RIPPL!</Text>
+                      <Text className="text-gray-600">Main app coming soon...</Text>
+                    </View>
+                  )} 
+                />
                 {/* More authenticated screens will be added later */}
               </>
             ) : (
               // Auth stack
               <>
                 <Stack.Screen name="Login" component={LoginScreen} />
-                <Stack.Screen name="Register" component={RegisterScreen} />
+                <Stack.Screen name="Registration" component={RegistrationScreen} />
               </>
             )}
           </Stack.Navigator>

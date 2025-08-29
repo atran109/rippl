@@ -2,6 +2,7 @@ import { Router } from "express";
 import { prisma } from "../src/db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { z } from "zod";
+import { updateRippleCounters } from "../src/trending.js";
 
 const router = Router();
 
@@ -62,6 +63,14 @@ router.post("/dream", requireAuth, async (req, res) => {
     create: { userId, rippleId: starter.id, isActive: true },
   });
 
+  // Check if this is a new membership to update counters
+  const isNewMembership = up.joinedAt.getTime() > (Date.now() - 60000); // Within last minute
+  if (isNewMembership) {
+    // Update trending counters for new participant using Redis directly
+    const { redis } = await import("../src/redis.js");
+    await redis.hincrby(`ripple:${starter.id}`, "new_participants_24h", 1);
+  }
+
   // if user has no primary, set this one
   const hasPrimary = await prisma.userRipple.findFirst({
     where: { userId, isPrimary: true },
@@ -86,6 +95,14 @@ router.post("/ripple/:id/join", requireAuth, async (req, res) => {
     update: { isActive: true },
     create: { userId, rippleId: id, isActive: true },
   });
+
+  // Check if this is a new membership to update counters
+  const isNewMembership = up.joinedAt.getTime() > (Date.now() - 60000); // Within last minute
+  if (isNewMembership) {
+    // Update trending counters for new participant using Redis directly
+    const { redis } = await import("../src/redis.js");
+    await redis.hincrby(`ripple:${id}`, "new_participants_24h", 1);
+  }
 
   // if no primary, set this as primary
   const hasPrimary = await prisma.userRipple.findFirst({

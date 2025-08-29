@@ -171,12 +171,13 @@ model Ripple {
 }
 
 model MicroAction {
-  id        String @id @default(cuid())
-  rippleId  String
-  text      String
-  bucket    String
-  status    String @default("active")
-  createdBy String @default("system")
+  id         String @id @default(cuid())
+  rippleId   String
+  text       String
+  bucket     String
+  difficulty Int?   @default(1) // 1-5 scale, nullable for backwards compatibility
+  status     String @default("active")
+  createdBy  String @default("system")
 
   // NEW fields for generation
   waveId     String

@@ -7,30 +7,48 @@ import { env } from "../src/env.js";
 
 const router = Router();
 
-const creds = z.object({
+const loginCreds = z.object({
   email: z.string().email(),
+  password: z.string().min(6),
+});
+
+const registerCreds = z.object({
+  email: z.string().email(),
+  username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
   password: z.string().min(6),
 });
 
 // POST /auth/register
 router.post("/register", async (req, res) => {
-  const parsed = creds.safeParse(req.body);
+  const parsed = registerCreds.safeParse(req.body);
   if (!parsed.success)
     return res.status(400).json({ error: parsed.error.issues });
 
-  const { email, password } = parsed.data;
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) return res.status(409).json({ error: "Email already in use" });
+  const { email, username, password } = parsed.data;
+  
+  // Check if email already exists
+  const existingEmail = await prisma.user.findUnique({ where: { email } });
+  if (existingEmail) return res.status(409).json({ error: "Email already in use" });
+
+  // Check if username already exists
+  const existingUsername = await prisma.user.findUnique({ where: { username } });
+  if (existingUsername) return res.status(409).json({ error: "Username already taken" });
 
   const passwordHash = await bcrypt.hash(password, 12);
-  const user = await prisma.user.create({ data: { email, passwordHash } });
+  const user = await prisma.user.create({ 
+    data: { email, username, passwordHash } 
+  });
 
-  res.status(201).json({ id: user.id, email: user.email });
+  res.status(201).json({ 
+    id: user.id, 
+    email: user.email, 
+    username: user.username 
+  });
 });
 
 // POST /auth/login
 router.post("/login", async (req, res) => {
-  const parsed = creds.safeParse(req.body);
+  const parsed = loginCreds.safeParse(req.body);
   if (!parsed.success)
     return res.status(400).json({ error: parsed.error.issues });
 

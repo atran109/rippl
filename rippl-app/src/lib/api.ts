@@ -18,6 +18,7 @@ export const WaveSchema = z.object({
 export const UserSchema = z.object({
   id: z.string(),
   email: z.string(),
+  username: z.string(),
   dream: z.string().nullable(),
   createdAt: z.string(),
 });
@@ -51,6 +52,7 @@ export const AuthResponseSchema = z.object({
 export const RegisterResponseSchema = z.object({
   id: z.string(),
   email: z.string(),
+  username: z.string(),
 });
 
 export const JoinWaveResponseSchema = z.object({
@@ -148,10 +150,10 @@ export const fetchJson = async <T>(
 // Specific API calls
 export const api = {
   // Auth
-  register: (email: string, password: string) =>
+  register: (email: string, username: string, password: string) =>
     fetchJson('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, username, password }),
     }, RegisterResponseSchema),
 
   login: (email: string, password: string) =>

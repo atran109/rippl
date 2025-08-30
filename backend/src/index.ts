@@ -6,6 +6,7 @@ import meRouter from "../routes/me.js";
 import rippleRouter from '../routes/ripples.js'
 import actionsRouter from '../routes/actions.js'
 import generationRouter from '../routes/generation.js'
+import wavesRouter from '../routes/waves.js'
 
 const app = express();
 app.use(cors());
@@ -18,6 +19,7 @@ app.use("/", onboardingRouter); // /waves, /join-wave, /ripple/:id/join
 app.use("/me", meRouter);
 app.use("/ripple", rippleRouter)
 app.use("/actions", actionsRouter)
+app.use("/waves", wavesRouter)
 app.use("/", generationRouter)
 
 const PORT = process.env.PORT || 3000;

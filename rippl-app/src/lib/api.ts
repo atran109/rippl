@@ -38,10 +38,11 @@ export const RippleSchema = z.object({
   }),
 });
 
+//Change later when things like impact and trending are done
 export const HomeResponseSchema = z.object({
-  primary_ripple: RippleSchema.nullable(),
-  today_action: MicroActionSchema.nullable(),
-  impact_chip: z.any().nullable(), // TODO: Define proper schema when implemented
+  primary_ripple: RippleSchema.nullable().optional(),
+  today_action: MicroActionSchema.nullable().optional(),
+  impact_chip: z.any().nullable().optional(), // TODO: refine when implemented
   message: z.string().optional(),
 });
 

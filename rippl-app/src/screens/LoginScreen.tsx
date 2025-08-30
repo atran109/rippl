@@ -10,7 +10,9 @@ import { RootStackParamList } from '../types/navigation';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
-export default function LoginScreen() {
+interface LoginScreenProps { onComplete?: () => void }
+
+export default function LoginScreen({ onComplete }: LoginScreenProps) {
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,11 +23,13 @@ export default function LoginScreen() {
       api.login(credentials.email, credentials.password),
     onSuccess: async (data) => {
       await setToken(data.token);
-      // Force app to re-check authentication
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Home' }],
-      });
+      if (onComplete) {
+        // Trigger App-level auth check which switches stacks
+        onComplete();
+      } else {
+        // Fallback: reset to Main
+        navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+      }
     },
     onError: (error) => {
       Alert.alert('Login Failed', error.message);
@@ -94,9 +98,9 @@ export default function LoginScreen() {
             <Text className="text-[#2AABC8] text-2xl">←</Text>
           </TouchableOpacity>
           
-          {/* RIPPL Logo - using icon.png as fallback since SVG needs special handling */}
+          {/* RIPPL Logo*/}
           <Image
-            source={require('../../assets/icon.png')}
+            source={require('../../assets/rippl-logo.png')}
             className="w-[26px] h-[26px]"
             resizeMode="contain"
           />
@@ -107,7 +111,7 @@ export default function LoginScreen() {
         <View className="flex-1 justify-center px-5">
           {/* Title */}
           <View className="items-center mb-[26px]">
-            <Text className="text-[#2AABC8] text-[23px] font-bold text-center font-['DM_Sans']">
+            <Text className="text-[#2AABC8] text-[23px] font-bold text-center">
               Welcome Back
             </Text>
           </View>
@@ -115,7 +119,7 @@ export default function LoginScreen() {
           {/* Form */}
           <View className="gap-[15px] mb-[15px]">
             <TextInput
-              className="bg-[#F4F4F4] p-[13px] rounded-[11px] text-[15px] font-['Inter']"
+              className="bg-[#F4F4F4] p-[13px] rounded-[11px] text-[15px]"
               value={email}
               onChangeText={setEmail}
               placeholder="Email/Username"
@@ -126,7 +130,7 @@ export default function LoginScreen() {
             />
 
             <TextInput
-              className="bg-[#F4F4F4] p-[13px] rounded-[11px] text-[15px] font-['Inter']"
+              className="bg-[#F4F4F4] p-[13px] rounded-[11px] text-[15px]"
               value={password}
               onChangeText={setPassword}
               placeholder="Password"
@@ -139,7 +143,7 @@ export default function LoginScreen() {
           {/* Forgot Password */}
           <View className="items-end mb-8">
             <TouchableOpacity>
-              <Text className="text-[#007AFF] text-[13px] font-['Inter']">
+              <Text className="text-[#007AFF] text-[13px]">
                 Forgot Password?
               </Text>
             </TouchableOpacity>
@@ -153,7 +157,7 @@ export default function LoginScreen() {
             onPress={handleLogin}
             disabled={loginMutation.isPending}
           >
-            <Text className="text-white text-[14px] font-semibold font-['Inter']">
+            <Text className="text-white text-[14px] font-semibold">
               {loginMutation.isPending ? 'Signing in...' : 'Sign In'}
             </Text>
           </TouchableOpacity>

@@ -59,7 +59,11 @@ const validatePassword = (password: string): PasswordRequirement[] => [
   },
 ];
 
-export default function RegistrationScreen() {
+interface RegistrationScreenProps {
+  onComplete?: () => void;
+}
+
+export default function RegistrationScreen({ onComplete }: RegistrationScreenProps) {
   const navigation = useNavigation<NavigationProp>();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -72,8 +76,13 @@ export default function RegistrationScreen() {
   const registerMutation = useMutation({
     mutationFn: () => api.register(formData.email, formData.username, formData.password),
     onSuccess: async (data) => {
+      // Set the token - this will trigger App.tsx to re-check auth state
+      // and show the wave selection screen
       await setToken(data.token || '');
-      navigation.replace('Main');
+      // Trigger auth state refresh
+      if (onComplete) {
+        onComplete();
+      }
     },
     onError: (error) => {
       Alert.alert('Registration Failed', error.message);
@@ -133,13 +142,13 @@ export default function RegistrationScreen() {
             </View>
             
             <View className="gap-[26px] items-center">
-              <Text className="text-[#2AABC8] text-[23px] font-bold text-center font-['DM_Sans']">
+              <Text className="text-[#2AABC8] text-[23px] font-bold text-center">
                 Hello, let's get you started
               </Text>
               
               <View className="w-full gap-[15px]">
                 <TextInput
-                  className="bg-[#F4F4F4] p-[13px] rounded-[10px] text-[15px] font-['Inter']"
+                  className="bg-[#F4F4F4] p-[13px] rounded-[10px] text-[15px]"
                   placeholder="Email"
                   placeholderTextColor="#8A8A8E"
                   value={formData.email}
@@ -161,13 +170,13 @@ export default function RegistrationScreen() {
             </View>
             
             <View className="gap-[26px] items-center">
-              <Text className="text-[#2AABC8] text-[23px] font-bold text-center font-['DM_Sans']">
+              <Text className="text-[#2AABC8] text-[23px] font-bold text-center">
                 Choose a username
               </Text>
               
               <View className="w-full gap-[15px]">
                 <TextInput
-                  className="bg-[#F4F4F4] p-[13px] rounded-[10px] text-[15px] font-['Inter']"
+                  className="bg-[#F4F4F4] p-[13px] rounded-[10px] text-[15px]"
                   placeholder="Username"
                   placeholderTextColor="#8A8A8E"
                   value={formData.username}
@@ -189,13 +198,13 @@ export default function RegistrationScreen() {
             </View>
             
             <View className="gap-[26px] items-center">
-              <Text className="text-[#2AABC8] text-[23px] font-bold text-center font-['DM_Sans']">
+              <Text className="text-[#2AABC8] text-[23px] font-bold text-center">
                 Set a secure password
               </Text>
               
               <View className="w-full gap-[15px]">
                 <TextInput
-                  className="bg-[#F4F4F4] p-[13px] rounded-[10px] text-[15px] font-['Inter']"
+                  className="bg-[#F4F4F4] p-[13px] rounded-[10px] text-[15px]"
                   placeholder="Password"
                   placeholderTextColor="#8A8A8E"
                   value={formData.password}
@@ -205,7 +214,7 @@ export default function RegistrationScreen() {
                 />
                 
                 <TextInput
-                  className="bg-[#F4F4F4] p-[13px] rounded-[10px] text-[15px] font-['Inter']"
+                  className="bg-[#F4F4F4] p-[13px] rounded-[10px] text-[15px]"
                   placeholder="Repeat Password"
                   placeholderTextColor="#8A8A8E"
                   value={formData.confirmPassword}
@@ -216,14 +225,14 @@ export default function RegistrationScreen() {
 
                 {formData.password && (
                   <View className="bg-white p-[15px] rounded-[10px] border border-[#B3B3B3]">
-                    <Text className="text-black text-[11px] mb-[8px] font-['Inter']">
+                    <Text className="text-black text-[11px] mb-[8px]">
                       The password must contain:
                     </Text>
                     <View className="gap-[5px]">
                       {passwordRequirements.map((requirement, index) => (
                         <View key={index} className="flex-row items-center gap-[8px]">
                           <View className="w-[4px] h-[4px] bg-[#5E5E5E] rounded-full" />
-                          <Text className={`text-[11px] font-['Inter'] ${requirement.isValid ? 'text-green-600' : 'text-[#5E5E5E]'}`}>
+                          <Text className={`text-[11px] ${requirement.isValid ? 'text-green-600' : 'text-[#5E5E5E]'}`}> 
                             {requirement.text}
                           </Text>
                         </View>
@@ -261,7 +270,7 @@ export default function RegistrationScreen() {
         {/* Bottom Action Area */}
         <View className="p-5 gap-[13px]">
           {currentStep === 3 && (
-            <Text className="text-[#5E5E5E] text-[13px] text-center font-['Inter']">
+            <Text className="text-[#5E5E5E] text-[13px] text-center">
               By Proceeding, you agree to our{' '}
               <Text className="text-[#007AFF] font-medium">Terms of Service</Text>
               {' '}and{' '}
@@ -274,7 +283,7 @@ export default function RegistrationScreen() {
             onPress={handleNext}
             disabled={registerMutation.isPending}
           >
-            <Text className="text-white text-[15px] font-semibold font-['Inter']">
+            <Text className="text-white text-[15px] font-semibold">
               {registerMutation.isPending ? 'Creating Account...' : 'Continue'}
             </Text>
           </TouchableOpacity>

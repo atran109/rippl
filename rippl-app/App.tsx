@@ -1,5 +1,5 @@
 import './global.css';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -8,29 +8,53 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Text, View } from 'react-native';
 
 import { RootStackParamList } from './src/types/navigation';
-import { getToken } from './src/lib/api';
+import { getToken, api } from './src/lib/api';
 
 // Import screens
 import LoginScreen from './src/screens/LoginScreen';
 import RegistrationScreen from './src/screens/RegistrationScreen';
+import WaveSelectionScreen from './src/screens/WaveSelectionScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const queryClient = new QueryClient();
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [authState, setAuthState] = useState<'loading' | 'unauthenticated' | 'onboarding' | 'authenticated'>('loading');
 
-  // Check authentication status on app start
-  useEffect(() => {
-    const checkAuth = async () => {
-      const token = await getToken();
-      setIsAuthenticated(!!token);
-    };
-    checkAuth();
+  // Check authentication and onboarding status
+  const checkAuthState = useCallback(async () => {
+    const token = await getToken();
+    
+    if (!token) {
+      setAuthState('unauthenticated');
+      return;
+    }
+
+    try {
+      // Check if user has completed onboarding by calling home endpoint
+      const homeData = await api.getHome();
+      
+      // If they have a primary ripple, they're fully authenticated
+      if (homeData.primary_ripple) {
+        setAuthState('authenticated');
+      } else {
+        // They're registered but need to complete onboarding (select a wave)
+        setAuthState('onboarding');
+      }
+    } catch (error) {
+      // If home call fails, they might need to complete onboarding
+      setAuthState('onboarding');
+    }
   }, []);
 
+  // Check on app start
+  useEffect(() => {
+    checkAuthState();
+  }, [checkAuthState]);
+
+
   // Show loading screen while checking auth
-  if (isAuthenticated === null) {
+  if (authState === 'loading') {
     return (
       <View className="flex-1 bg-white items-center justify-center">
         <Text className="text-lg text-gray-600">Loading...</Text>
@@ -48,25 +72,35 @@ export default function App() {
               headerShown: false,
             }}
           >
-            {isAuthenticated ? (
-              // Authenticated stack - placeholder for now
+            {authState === 'authenticated' ? (
+              // Fully authenticated and onboarded users
               <>
-                <Stack.Screen 
-                  name="Main" 
-                  component={() => (
+                <Stack.Screen name="Main">
+                  {() => (
                     <View className="flex-1 bg-white items-center justify-center">
                       <Text className="text-2xl text-gray-800">Welcome to RIPPL!</Text>
                       <Text className="text-gray-600">Main app coming soon...</Text>
                     </View>
-                  )} 
-                />
+                  )}
+                </Stack.Screen>
                 {/* More authenticated screens will be added later */}
               </>
-            ) : (
-              // Auth stack
+            ) : authState === 'onboarding' ? (
+              // Registered but needs to complete onboarding
               <>
-                <Stack.Screen name="Login" component={LoginScreen} />
-                <Stack.Screen name="Registration" component={RegistrationScreen} />
+                <Stack.Screen name="WaveSelection">
+                  {(props) => <WaveSelectionScreen {...props} onComplete={checkAuthState} />}
+                </Stack.Screen>
+              </>
+            ) : (
+              // Unauthenticated users
+              <>
+                <Stack.Screen name="Login">
+                  {(props) => <LoginScreen {...props} onComplete={checkAuthState} />}
+                </Stack.Screen>
+                <Stack.Screen name="Registration">
+                  {(props) => <RegistrationScreen {...props} onComplete={checkAuthState} />}
+                </Stack.Screen>
               </>
             )}
           </Stack.Navigator>

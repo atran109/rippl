@@ -2,6 +2,7 @@ export type RootStackParamList = {
   Auth: undefined;
   Register: undefined;
   Registration: undefined;
+  WaveSelection: undefined;
   Login: undefined;
   Onboarding: undefined;
   Main: undefined;

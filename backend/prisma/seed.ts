@@ -1,5 +1,7 @@
+import 'dotenv/config';
 import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+// Use DIRECT_URL for seeding to avoid PgBouncer/port 6543 issues
+const prisma = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL || process.env.DATABASE_URL });
 
 type WaveSeed = {
   name: string;

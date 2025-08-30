@@ -5,10 +5,10 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Text, View } from 'react-native';
+import { Text, View, TouchableOpacity } from 'react-native';
 
 import { RootStackParamList } from './src/types/navigation';
-import { getToken, api } from './src/lib/api';
+import { getToken, api, removeToken } from './src/lib/api';
 
 // Import screens
 import LoginScreen from './src/screens/LoginScreen';
@@ -23,26 +23,33 @@ export default function App() {
 
   // Check authentication and onboarding status
   const checkAuthState = useCallback(async () => {
+    console.log('🔍 Checking auth state...');
     const token = await getToken();
+    console.log('📱 Token exists:', !!token);
     
     if (!token) {
+      console.log('❌ No token, setting unauthenticated');
       setAuthState('unauthenticated');
       return;
     }
 
     try {
       // Check if user has completed onboarding by calling home endpoint
+      console.log('🌐 Calling /me/home API...');
       const homeData = await api.getHome();
+      console.log('📊 Home data:', homeData);
       
       // If they have a primary ripple, they're fully authenticated
       if (homeData.primary_ripple) {
+        console.log('✅ User has primary ripple, setting authenticated');
         setAuthState('authenticated');
       } else {
-        // They're registered but need to complete onboarding (select a wave)
+        console.log('⏳ User has no primary ripple, setting onboarding');
         setAuthState('onboarding');
       }
     } catch (error) {
       // If home call fails, they might need to complete onboarding
+      console.log('❌ Home API failed:', error);
       setAuthState('onboarding');
     }
   }, []);
@@ -80,6 +87,17 @@ export default function App() {
                     <View className="flex-1 bg-white items-center justify-center">
                       <Text className="text-2xl text-gray-800">Welcome to RIPPL!</Text>
                       <Text className="text-gray-600">Main app coming soon...</Text>
+                      
+                      {/* Temporary logout button for testing */}
+                      <TouchableOpacity
+                        className="mt-8 bg-red-500 px-6 py-3 rounded-lg"
+                        onPress={async () => {
+                          await removeToken();
+                          checkAuthState();
+                        }}
+                      >
+                        <Text className="text-white font-semibold">Logout (Test Only)</Text>
+                      </TouchableOpacity>
                     </View>
                   )}
                 </Stack.Screen>

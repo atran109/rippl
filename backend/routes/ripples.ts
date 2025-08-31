@@ -13,6 +13,17 @@ router.get("/:id", requireAuth, async (req, res) => {
     where: { id },
     include: {
       wave: true,
+      microActions: {
+        where: { status: "active" },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      },
+      impactIndex: true,
+      trendingScores: {
+        orderBy: { calculatedAt: "desc" },
+        take: 3,
+      },
+      rippleCounter: true,
       // Summary may be null if your worker hasn't run yet
       // (we'll fall back to zeros)
     },
@@ -62,6 +73,14 @@ router.get("/:id", requireAuth, async (req, res) => {
       is_primary: !!membership?.isPrimary,
     },
     recent_activity: recent.map((r) => ({ city: r.city, blurb: r.blurb })),
+    microActions: ripple.microActions.map((ma) => ({
+      id: ma.id,
+      text: ma.text,
+      bucket: ma.bucket,
+    })),
+    impactIndex: ripple.impactIndex,
+    trendingScores: ripple.trendingScores,
+    rippleCounter: ripple.rippleCounter,
   });
 });
 

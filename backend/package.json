@@ -10,7 +10,8 @@
     "prisma:studio": "npx prisma studio",
     "db:migrate": "npx prisma migrate dev",
     "db:generate": "npx prisma generate",
-    "db:seed": "node --loader ts-node/esm prisma/seed.ts"
+    "db:seed": "node --loader ts-node/esm prisma/seed.ts",
+    "db:seed-impact": "node --loader ts-node/esm prisma/seed-impact.ts"
   },
   "keywords": [],
   "author": "",

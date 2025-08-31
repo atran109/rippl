@@ -57,17 +57,21 @@ router.get("/profile", requireAuth, async (req, res) => {
   
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: {
-      id: true,
-      email: true,
-      dream: true,
-      createdAt: true,
+    include: {
+      impactSummary: true,
     }
   });
 
   if (!user) return res.status(404).json({ error: "User not found" });
 
-  res.json(user);
+  // Return only the fields we want to expose
+  res.json({
+    id: user.id,
+    email: user.email,
+    dream: user.dream,
+    createdAt: user.createdAt,
+    impactSummary: user.impactSummary,
+  });
 });
 
 // PUT /me/dream - Update user's dream

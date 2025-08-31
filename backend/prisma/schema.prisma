@@ -3,35 +3,20 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
-
-/**
- * ---------- Enums ----------
- */
-
-enum TemplateStatus {
-  active
-  inactive
-  archived
-}
-
-/**
- * ---------- Core models ----------
- */
 
 model WaveBucket {
-  waveId String
-  name   String // bucket name, e.g., "conversation_checkin"
-
-  wave Wave @relation(fields: [waveId], references: [id])
-
-  // back-relations
+  waveId       String
+  name         String
+  actionLogs   ActionLog[]
+  microActions MicroAction[]
   templates    Template[]    @relation("TemplateToWaveBucket")
-  microActions MicroAction[] @relation("MicroActionToWaveBucket")
+  wave         Wave          @relation(fields: [waveId], references: [id], onDelete: Cascade)
 
-  @@id([waveId, name]) // composite PK for FK references
+  @@id([waveId, name])
 }
 
 model Template {
@@ -43,48 +28,49 @@ model Template {
   status        TemplateStatus @default(active)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
-
-  // relations
-  wave         Wave          @relation("TemplateToWave", fields: [waveId], references: [id])
-  waveBucket   WaveBucket    @relation("TemplateToWaveBucket", fields: [waveId, bucket], references: [waveId, name])
-  microActions MicroAction[] @relation("TemplateToMicroAction")
+  microActions  MicroAction[]  @relation("TemplateToMicroAction")
+  waveBucket    WaveBucket     @relation("TemplateToWaveBucket", fields: [waveId, bucket], references: [waveId, name])
+  wave          Wave           @relation("TemplateToWave", fields: [waveId], references: [id], onDelete: Cascade)
 
   @@index([waveId, bucket])
+  @@index([status])
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  createdAt    DateTime @default(now())
-
-  // Dream is now just a profile field
-  dream String?
-
-  // 1:N memberships
-  memberships UserRipple[] @relation("UserToMemberships")
-
-  actionLogs ActionLog[] @relation("UserToActionLogs")
+  id            String             @id @default(cuid())
+  email         String             @unique
+  passwordHash  String
+  createdAt     DateTime           @default(now())
+  dream         String?
+  actionLogs    ActionLog[]
+  impactSummary UserImpactSummary?
+  memberships   UserRipple[]
 }
 
 model Wave {
-  id             String  @id @default(cuid())
-  name           String  @unique
-  description    String
-  icon           String?
-  impactCoef     Float
-  impactUnit     String
-  impactSource   String
-  allowedBuckets String // comma-separated list
-
-  ripples      Ripple[]      @relation("WaveToRipples")
-  actionLogs   ActionLog[]   @relation("WaveToActionLogs")
-  waveBuckets  WaveBucket[]
-  templates    Template[]    @relation("TemplateToWave")
-  microActions MicroAction[] @relation("WaveToMicroActions")
+  id                      String              @id @default(cuid())
+  name                    String              @unique
+  description             String
+  icon                    String?
+  impactCoef              Float
+  impactUnit              String
+  impactSource            String
+  impactFormula           String?
+  impactSourcesAndCaveats String?
+  impactWhatWeCount       String?
+  allowedBuckets          Json                @default("[]")
+  actionLogs              ActionLog[]
+  bucketWeights           BucketWeight[]
+  impactCalculations      ImpactCalculation[]
+  impactIndices           ImpactIndex[]
+  microActions            MicroAction[]       @relation("WaveToMicroActions")
+  ripples                 Ripple[]
+  rippleCounters          RippleCounter[]
+  templates               Template[]          @relation("TemplateToWave")
+  trendingScores          TrendingScore[]
+  waveBuckets             WaveBucket[]
 }
 
-//a rippl that is attached to a user
 model UserRipple {
   id        String   @id @default(cuid())
   userId    String
@@ -92,29 +78,25 @@ model UserRipple {
   isActive  Boolean  @default(true)
   isPrimary Boolean  @default(false)
   joinedAt  DateTime @default(now())
-
-  // name the relations explicitly
-  user   User   @relation("UserToMemberships", fields: [userId], references: [id])
-  ripple Ripple @relation("RippleToMemberships", fields: [rippleId], references: [id])
+  ripple    Ripple   @relation(fields: [rippleId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, rippleId])
   @@index([userId, isPrimary])
+  @@index([rippleId])
 }
 
-//model used to generate blurb info for community tab
 model RippleActivity {
   id        String   @id @default(cuid())
   rippleId  String
   city      String?
   blurb     String
   createdAt DateTime @default(now())
-
-  ripple Ripple @relation("RippleToRippleActivity", fields: [rippleId], references: [id])
+  ripple    Ripple   @relation(fields: [rippleId], references: [id], onDelete: Cascade)
 
   @@index([rippleId, createdAt])
 }
 
-//summary used for ripple page
 model RippleSummary {
   rippleId     String   @id
   participants Int
@@ -123,83 +105,200 @@ model RippleSummary {
   impactUnit   String
   impactSource String
   updatedAt    DateTime @default(now())
-
-  ripple Ripple @relation("RippleToRippleSummary", fields: [rippleId], references: [id])
+  ripple       Ripple   @relation(fields: [rippleId], references: [id], onDelete: Cascade)
 }
 
 model Ripple {
-  id          String  @id @default(cuid())
-  waveId      String
-  title       String
-  description String?
-  createdBy   String  @default("system")
-  status      String  @default("active")
-  //the default initial rippl assigned to users when first registering a wave
-  isStarter   Boolean @default(false)
-
-  // Context for Stories
-  audience_noun  String?
-  context_label  String?
-  blurb_template String?
-  default_bucket String?
-
-  wave Wave @relation("WaveToRipples", fields: [waveId], references: [id])
-
-  // back-relations (help Prisma disambiguate)
-  microActions     MicroAction[]
-  memberships      UserRipple[]     @relation("RippleToMemberships")
-  actionLogs       ActionLog[]      @relation("RippleToActionLogs")
-  rippleActivities RippleActivity[] @relation("RippleToRippleActivity")
-  rippleSummary    RippleSummary?   @relation("RippleToRippleSummary")
+  id                 String              @id @default(cuid())
+  waveId             String
+  title              String
+  description        String?
+  createdBy          String              @default("system")
+  status             String              @default("active")
+  audience_noun      String?
+  context_label      String?
+  blurb_template     String?
+  default_bucket     String?
+  isStarter          Boolean             @default(false)
+  actionLogs         ActionLog[]
+  impactCalculations ImpactCalculation[]
+  impactIndex        ImpactIndex?
+  microActions       MicroAction[]
+  wave               Wave                @relation(fields: [waveId], references: [id], onDelete: Cascade)
+  rippleActivities   RippleActivity[]
+  rippleCounter      RippleCounter?
+  rippleSummary      RippleSummary?
+  trendingScores     TrendingScore[]
+  memberships        UserRipple[]
 
   @@index([waveId])
+  @@index([status])
 }
 
 model MicroAction {
-  id        String @id @default(cuid())
-  rippleId  String
-  text      String
-  bucket    String
-  status    String @default("active")
-  createdBy String @default("system")
-
-  // NEW fields for generation
-  waveId     String
+  id         String      @id @default(cuid())
+  rippleId   String
+  text       String
+  bucket     String
+  status     String      @default("active")
+  createdBy  String      @default("system")
+  createdAt  DateTime    @default(now())
   templateId String?
-  createdAt  DateTime @default(now())
-
-  ripple     Ripple      @relation(fields: [rippleId], references: [id])
-  wave       Wave        @relation("WaveToMicroActions", fields: [waveId], references: [id])
+  waveId     String
+  actionLogs ActionLog[]
+  ripple     Ripple      @relation(fields: [rippleId], references: [id], onDelete: Cascade)
   template   Template?   @relation("TemplateToMicroAction", fields: [templateId], references: [id])
-  actionLogs ActionLog[] @relation("MicroActionToActionLogs")
-
-  // ensure bucket is valid for the wave
-  waveBucket WaveBucket @relation("MicroActionToWaveBucket", fields: [waveId, bucket], references: [waveId, name])
+  waveBucket WaveBucket  @relation(fields: [waveId, bucket], references: [waveId, name])
+  wave       Wave        @relation("WaveToMicroActions", fields: [waveId], references: [id], onDelete: Cascade)
 
   @@index([rippleId])
   @@index([waveId, bucket])
+  @@index([templateId])
+  @@index([status])
 }
 
-//completed micro actions
 model ActionLog {
-  id            String   @id @default(cuid())
+  id            String      @id @default(cuid())
   userId        String
   microActionId String
   rippleId      String
   waveId        String
   bucket        String
-  createdAt     DateTime @default(now())
+  createdAt     DateTime    @default(now())
   city          String?
-  noteText      String? // 0–120 chars when present
-  shareAnon     Boolean  @default(false)
-
-  //many to one relationship for these: user can have many actionlogs, a microaction can be done multiple times by multiple people, etc
-  user   User        @relation("UserToActionLogs", fields: [userId], references: [id])
-  micro  MicroAction @relation("MicroActionToActionLogs", fields: [microActionId], references: [id])
-  ripple Ripple      @relation("RippleToActionLogs", fields: [rippleId], references: [id])
-  wave   Wave        @relation("WaveToActionLogs", fields: [waveId], references: [id])
+  noteText      String?     @db.VarChar(120)
+  shareAnon     Boolean     @default(false)
+  micro         MicroAction @relation(fields: [microActionId], references: [id], onDelete: Cascade)
+  ripple        Ripple      @relation(fields: [rippleId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  waveBucket    WaveBucket  @relation(fields: [waveId, bucket], references: [waveId, name])
+  wave          Wave        @relation(fields: [waveId], references: [id], onDelete: Cascade)
 
   @@index([rippleId, createdAt])
   @@index([rippleId, bucket])
   @@index([userId, createdAt])
+  @@index([microActionId])
+  @@index([waveId])
+}
+
+model BucketWeight {
+  id        String   @id @default(cuid())
+  waveId    String
+  bucket    String
+  weight    Float
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  wave      Wave     @relation(fields: [waveId], references: [id], onDelete: Cascade)
+
+  @@unique([waveId, bucket])
+  @@index([waveId, isActive])
+}
+
+model ImpactCalculation {
+  id              String                @id @default(cuid())
+  rippleId        String
+  waveId          String
+  calculationType ImpactCalculationType @default(realtime)
+  timeframe       String?
+  totalActions    Int
+  eligibleActions Float
+  impactValue     Float
+  bucketBreakdown Json
+  calculatedAt    DateTime              @default(now())
+  ripple          Ripple                @relation(fields: [rippleId], references: [id], onDelete: Cascade)
+  wave            Wave                  @relation(fields: [waveId], references: [id], onDelete: Cascade)
+
+  @@index([rippleId, calculationType, timeframe])
+  @@index([waveId, calculatedAt])
+}
+
+model ImpactIndex {
+  id              String   @id @default(cuid())
+  rippleId        String   @unique
+  waveId          String
+  indexValue      Float
+  isVisible       Boolean
+  medianImpact30d Float
+  rippleImpact30d Float
+  participants    Int
+  calculatedAt    DateTime @default(now())
+  ripple          Ripple   @relation(fields: [rippleId], references: [id], onDelete: Cascade)
+  wave            Wave     @relation(fields: [waveId], references: [id], onDelete: Cascade)
+
+  @@index([waveId, indexValue])
+  @@index([calculatedAt])
+}
+
+model UserImpactSummary {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  totalActions         Int
+  totalEligibleActions Float
+  totalImpact          Float
+  ripplesJoined        Int
+  impactByWave         Json
+  calculatedAt         DateTime @default(now())
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([calculatedAt])
+}
+
+model RippleCounter {
+  id                 String    @id @default(cuid())
+  rippleId           String    @unique
+  waveId             String
+  participantsTotal  Int       @default(0)
+  actions24h         Int       @default(0)
+  actions1h          Int       @default(0)
+  newParticipants24h Int       @default(0)
+  boost              Float     @default(0)
+  topTenSince        DateTime?
+  lastDecay          DateTime?
+  version            Int       @default(0)
+  updatedAt          DateTime  @default(now()) @updatedAt
+  ripple             Ripple    @relation(fields: [rippleId], references: [id], onDelete: Cascade)
+  wave               Wave      @relation(fields: [waveId], references: [id], onDelete: Cascade)
+
+  @@index([waveId, updatedAt])
+}
+
+model TrendingScore {
+  id                 String                  @id @default(cuid())
+  rippleId           String
+  waveId             String
+  calculationType    TrendingCalculationType @default(realtime)
+  score              Float
+  participants       Int
+  actions24h         Int
+  actions1h          Int
+  newParticipants24h Int
+  boost              Float
+  isTopTen           Boolean                 @default(false)
+  topTenDays         Int                     @default(0)
+  calculatedAt       DateTime                @default(now())
+  ripple             Ripple                  @relation(fields: [rippleId], references: [id], onDelete: Cascade)
+  wave               Wave                    @relation(fields: [waveId], references: [id], onDelete: Cascade)
+
+  @@index([rippleId, calculationType])
+  @@index([waveId, score, calculatedAt])
+}
+
+enum TemplateStatus {
+  active
+  inactive
+  archived
+}
+
+enum TrendingCalculationType {
+  realtime
+  hourly
+  daily
+}
+
+enum ImpactCalculationType {
+  realtime
+  daily
+  monthly
+  custom
 }

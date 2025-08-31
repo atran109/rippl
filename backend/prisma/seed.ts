@@ -9,6 +9,12 @@ type WaveSeed = {
   impactUnit: string;
   impactSource: string;
   allowedBuckets: string[];
+  // New impact explanation fields
+  impactWhatWeCount?: string;
+  impactFormula?: string;
+  impactSourcesAndCaveats?: string;
+  // Bucket weights for impact calculation
+  bucketWeights?: { bucket: string; weight: number }[];
   ripples: Array<{
     title: string;
     description?: string;
@@ -16,6 +22,7 @@ type WaveSeed = {
     context_label?: string;
     default_bucket?: string;
     blurb_template?: string;
+    isStarter?: boolean; // Mark starter ripples
     microTemplates: Array<{ bucket: string; texts: string[] }>;
   }>;
 };
@@ -34,6 +41,15 @@ const waves: WaveSeed[] = [
       "self_care_moment",
       "workplace_advocacy",
     ],
+    impactWhatWeCount: "Conversations and actions that normalize mental health discussions",
+    impactFormula: "Total eligible actions × -0.006 stigma points",
+    impactSourcesAndCaveats: "Based on WHO 2024 stigma reduction studies. Conservative estimate.",
+    bucketWeights: [
+      { bucket: "conversation_checkin", weight: 1.0 },
+      { bucket: "share_resources", weight: 0.8 },
+      { bucket: "self_care_moment", weight: 0.5 },
+      { bucket: "workplace_advocacy", weight: 2.0 }, // Higher impact for advocacy
+    ],
     ripples: [
       {
         title: "Normalize therapy talk at work",
@@ -41,13 +57,14 @@ const waves: WaveSeed[] = [
         audience_noun: "coworkers",
         context_label: "at work",
         default_bucket: "conversation_checkin",
+        isStarter: true, // This is the default starter ripple for Mental Health
         microTemplates: [
           {
             bucket: "conversation_checkin",
             texts: [
-              "Ask a coworker how they’re really doing",
+              "Ask a coworker how they're really doing",
               "Invite a 5-minute walk-and-talk",
-              "Say “How’s your stress level today?”",
+              "Say \"How's your stress level today?\"",
               "Share one thing that helped your mood recently",
               "Check in with a teammate after a tough meeting",
             ],
@@ -75,7 +92,7 @@ const waves: WaveSeed[] = [
           {
             bucket: "workplace_advocacy",
             texts: [
-              "Add a “wellbeing” check to next agenda",
+              "Add a \"wellbeing\" check to next agenda",
               "Suggest a mental-health day policy",
               "Ask manager for a no-meeting hour",
               "Encourage camera-off option this call",
@@ -128,6 +145,15 @@ const waves: WaveSeed[] = [
       "recycle_correctly",
       "conserve_energy_short",
     ],
+    impactWhatWeCount: "Physical litter removed and waste reduction actions",
+    impactFormula: "Eligible actions × 0.09 kg average item weight",
+    impactSourcesAndCaveats: "EPA 2023 average litter weight data. Conservative estimate, actual impact may be higher.",
+    bucketWeights: [
+      { bucket: "pick_up_litter", weight: 1.0 },
+      { bucket: "bring_reusable", weight: 0.7 },
+      { bucket: "recycle_correctly", weight: 0.8 },
+      { bucket: "conserve_energy_short", weight: 0.6 },
+    ],
     ripples: [
       {
         title: "Zero-Litter Walks",
@@ -135,6 +161,7 @@ const waves: WaveSeed[] = [
         audience_noun: "neighbors",
         context_label: "on daily walks",
         default_bucket: "pick_up_litter",
+        isStarter: true, // Starter ripple for Environment
         microTemplates: [
           {
             bucket: "pick_up_litter",
@@ -188,7 +215,7 @@ const waves: WaveSeed[] = [
           {
             bucket: "conserve_energy_short",
             texts: [
-              "Turn off a light you’re not using",
+              "Turn off a light you're not using",
               "Unplug a dormant charger",
               "Lower thermostat 1° for an hour",
               "Air-dry an item instead of dryer",
@@ -212,6 +239,15 @@ const waves: WaveSeed[] = [
       "share_opportunity",
       "support_bipoc",
     ],
+    impactWhatWeCount: "Local economic support and community building actions",
+    impactFormula: "Eligible actions (placeholder for economic impact calculation)",
+    impactSourcesAndCaveats: "Beta metric. Will be updated with local economic impact data.",
+    bucketWeights: [
+      { bucket: "conscious_purchase", weight: 1.5 },
+      { bucket: "donate_small", weight: 1.2 },
+      { bucket: "share_opportunity", weight: 0.8 },
+      { bucket: "support_bipoc", weight: 2.0 }, // Higher weight for direct support
+    ],
     ripples: [
       {
         title: "Shop BIPOC Near Me",
@@ -219,6 +255,7 @@ const waves: WaveSeed[] = [
         audience_noun: "neighbors",
         context_label: "around town",
         default_bucket: "conscious_purchase",
+        isStarter: true, // Starter ripple for Community
         microTemplates: [
           {
             bucket: "conscious_purchase",
@@ -260,9 +297,11 @@ async function main() {
   console.log("Seeding…");
 
   // Clear existing (dev-only convenience)
+  await prisma.actionLog.deleteMany();
   await prisma.microAction.deleteMany();
   await prisma.template.deleteMany();
   await prisma.waveBucket.deleteMany();
+  await prisma.bucketWeight.deleteMany();
   await prisma.ripple.deleteMany();
   await prisma.wave.deleteMany();
 
@@ -275,7 +314,10 @@ async function main() {
         impactCoef: w.impactCoef,
         impactUnit: w.impactUnit,
         impactSource: w.impactSource,
-        allowedBuckets: w.allowedBuckets.join(","),
+        allowedBuckets: w.allowedBuckets, // Now stored as JSON array
+        impactWhatWeCount: w.impactWhatWeCount,
+        impactFormula: w.impactFormula,
+        impactSourcesAndCaveats: w.impactSourcesAndCaveats,
       },
     });
 
@@ -289,6 +331,20 @@ async function main() {
       });
     }
 
+    // Create BucketWeight entries if provided
+    if (w.bucketWeights) {
+      for (const bw of w.bucketWeights) {
+        await prisma.bucketWeight.create({
+          data: {
+            waveId: wave.id,
+            bucket: bw.bucket,
+            weight: bw.weight,
+            isActive: true,
+          },
+        });
+      }
+    }
+
     for (const r of w.ripples) {
       const ripple = await prisma.ripple.create({
         data: {
@@ -299,6 +355,20 @@ async function main() {
           context_label: r.context_label ?? null,
           blurb_template: r.blurb_template ?? null,
           default_bucket: r.default_bucket ?? null,
+          isStarter: r.isStarter ?? false,
+        },
+      });
+
+      // Initialize RippleCounter for trending system
+      await prisma.rippleCounter.create({
+        data: {
+          rippleId: ripple.id,
+          waveId: wave.id,
+          participantsTotal: 0,
+          actions24h: 0,
+          actions1h: 0,
+          newParticipants24h: 0,
+          boost: 0,
         },
       });
 

@@ -10,6 +10,7 @@ const router = Router();
 const creds = z.object({
   email: z.string().email(),
   password: z.string().min(6),
+  username: z.string().min(3).optional(),
 });
 
 // POST /auth/register
@@ -18,12 +19,15 @@ router.post("/register", async (req, res) => {
   if (!parsed.success)
     return res.status(400).json({ error: parsed.error.issues });
 
-  const { email, password } = parsed.data;
+  const { email, password, username } = parsed.data;
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return res.status(409).json({ error: "Email already in use" });
 
+  // Generate username if not provided
+  const finalUsername = username || email.split('@')[0] + '_' + Date.now().toString().slice(-6);
+
   const passwordHash = await bcrypt.hash(password, 12);
-  const user = await prisma.user.create({ data: { email, passwordHash } });
+  const user = await prisma.user.create({ data: { email, passwordHash, username: finalUsername } });
 
   res.status(201).json({ id: user.id, email: user.email });
 });

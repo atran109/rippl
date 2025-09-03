@@ -8,9 +8,28 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// Impact calculation types
+enum ImpactCalculationType {
+  SEVEN_DAY
+  THIRTY_DAY
+  ALL_TIME
+}
+
+// Trending calculation types
+enum TrendingCalculationType {
+  HOURLY
+  DAILY
+  WEEKLY
+}
+
 model WaveBucket {
   waveId       String
   name         String
+  // Impact weighting and lifecycle for this bucket within a wave
+  weight       Float        @default(1.0)
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt @default(now())
   actionLogs   ActionLog[]
   microActions MicroAction[]
   templates    Template[]    @relation("TemplateToWaveBucket")
@@ -30,10 +49,9 @@ model Template {
   updatedAt     DateTime       @updatedAt
   microActions  MicroAction[]  @relation("TemplateToMicroAction")
   waveBucket    WaveBucket     @relation("TemplateToWaveBucket", fields: [waveId, bucket], references: [waveId, name])
-  wave          Wave           @relation("TemplateToWave", fields: [waveId], references: [id], onDelete: Cascade)
+  wave          Wave           @relation("TemplateToWave", fields: [waveId], references: [id])
 
   @@index([waveId, bucket])
-  @@index([status])
 }
 
 model User {
@@ -42,33 +60,33 @@ model User {
   passwordHash  String
   createdAt     DateTime           @default(now())
   dream         String?
+  username      String             @unique
   actionLogs    ActionLog[]
-  impactSummary UserImpactSummary?
   memberships   UserRipple[]
+  impactSummary UserImpactSummary?
 }
 
 model Wave {
-  id                      String              @id @default(cuid())
-  name                    String              @unique
-  description             String
-  icon                    String?
-  impactCoef              Float
-  impactUnit              String
-  impactSource            String
-  impactFormula           String?
-  impactSourcesAndCaveats String?
-  impactWhatWeCount       String?
-  allowedBuckets          Json                @default("[]")
-  actionLogs              ActionLog[]
-  bucketWeights           BucketWeight[]
-  impactCalculations      ImpactCalculation[]
-  impactIndices           ImpactIndex[]
-  microActions            MicroAction[]       @relation("WaveToMicroActions")
-  ripples                 Ripple[]
-  rippleCounters          RippleCounter[]
-  templates               Template[]          @relation("TemplateToWave")
-  trendingScores          TrendingScore[]
-  waveBuckets             WaveBucket[]
+  id                        String               @id @default(cuid())
+  name                      String               @unique
+  description               String
+  icon                      String?
+  impactCoef                Float
+  impactUnit                String
+  impactSource              String
+  impactFormula             String?
+  impactSourcesAndCaveats   String?
+  impactWhatWeCount         String?
+  allowedBuckets            Json                 @default("[]")
+  actionLogs                ActionLog[]
+  microActions              MicroAction[]        @relation("WaveToMicroActions")
+  ripples                   Ripple[]
+  templates                 Template[]           @relation("TemplateToWave")
+  waveBuckets               WaveBucket[]
+  impactCalculations        ImpactCalculation[]
+  impactIndices             ImpactIndex[]
+  rippleCounters            RippleCounter[]
+  trendingScores            TrendingScore[]
 }
 
 model UserRipple {
@@ -78,12 +96,11 @@ model UserRipple {
   isActive  Boolean  @default(true)
   isPrimary Boolean  @default(false)
   joinedAt  DateTime @default(now())
-  ripple    Ripple   @relation(fields: [rippleId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ripple    Ripple   @relation(fields: [rippleId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, rippleId])
   @@index([userId, isPrimary])
-  @@index([rippleId])
 }
 
 model RippleActivity {
@@ -92,7 +109,7 @@ model RippleActivity {
   city      String?
   blurb     String
   createdAt DateTime @default(now())
-  ripple    Ripple   @relation(fields: [rippleId], references: [id], onDelete: Cascade)
+  ripple    Ripple   @relation(fields: [rippleId], references: [id])
 
   @@index([rippleId, createdAt])
 }
@@ -105,34 +122,33 @@ model RippleSummary {
   impactUnit   String
   impactSource String
   updatedAt    DateTime @default(now())
-  ripple       Ripple   @relation(fields: [rippleId], references: [id], onDelete: Cascade)
+  ripple       Ripple   @relation(fields: [rippleId], references: [id])
 }
 
 model Ripple {
-  id                 String              @id @default(cuid())
-  waveId             String
-  title              String
-  description        String?
-  createdBy          String              @default("system")
-  status             String              @default("active")
-  audience_noun      String?
-  context_label      String?
-  blurb_template     String?
-  default_bucket     String?
-  isStarter          Boolean             @default(false)
-  actionLogs         ActionLog[]
-  impactCalculations ImpactCalculation[]
-  impactIndex        ImpactIndex?
-  microActions       MicroAction[]
-  wave               Wave                @relation(fields: [waveId], references: [id], onDelete: Cascade)
-  rippleActivities   RippleActivity[]
-  rippleCounter      RippleCounter?
-  rippleSummary      RippleSummary?
-  trendingScores     TrendingScore[]
-  memberships        UserRipple[]
+  id                   String               @id @default(cuid())
+  waveId               String
+  title                String
+  description          String?
+  createdBy            String               @default("system")
+  status               String               @default("active")
+  audience_noun        String?
+  context_label        String?
+  blurb_template       String?
+  default_bucket       String?
+  isStarter            Boolean              @default(false)
+  actionLogs           ActionLog[]
+  microActions         MicroAction[]
+  wave                 Wave                 @relation(fields: [waveId], references: [id], onDelete: Cascade)
+  rippleActivities     RippleActivity[]
+  rippleSummary        RippleSummary?
+  memberships          UserRipple[]
+  impactCalculations   ImpactCalculation[]
+  impactIndex          ImpactIndex?
+  rippleCounter        RippleCounter?
+  trendingScores       TrendingScore[]
 
   @@index([waveId])
-  @@index([status])
 }
 
 model MicroAction {
@@ -146,15 +162,13 @@ model MicroAction {
   templateId String?
   waveId     String
   actionLogs ActionLog[]
-  ripple     Ripple      @relation(fields: [rippleId], references: [id], onDelete: Cascade)
+  ripple     Ripple      @relation(fields: [rippleId], references: [id])
   template   Template?   @relation("TemplateToMicroAction", fields: [templateId], references: [id])
   waveBucket WaveBucket  @relation(fields: [waveId, bucket], references: [waveId, name])
-  wave       Wave        @relation("WaveToMicroActions", fields: [waveId], references: [id], onDelete: Cascade)
+  wave       Wave        @relation("WaveToMicroActions", fields: [waveId], references: [id])
 
   @@index([rippleId])
   @@index([waveId, bucket])
-  @@index([templateId])
-  @@index([status])
 }
 
 model ActionLog {
@@ -168,120 +182,16 @@ model ActionLog {
   city          String?
   noteText      String?     @db.VarChar(120)
   shareAnon     Boolean     @default(false)
-  micro         MicroAction @relation(fields: [microActionId], references: [id], onDelete: Cascade)
+  micro         MicroAction @relation(fields: [microActionId], references: [id])
   ripple        Ripple      @relation(fields: [rippleId], references: [id], onDelete: Cascade)
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  waveBucket    WaveBucket  @relation(fields: [waveId, bucket], references: [waveId, name])
+  user          User        @relation(fields: [userId], references: [id])
   wave          Wave        @relation(fields: [waveId], references: [id], onDelete: Cascade)
+  waveBucket    WaveBucket  @relation(fields: [waveId, bucket], references: [waveId, name])
 
   @@index([rippleId, createdAt])
   @@index([rippleId, bucket])
   @@index([userId, createdAt])
-  @@index([microActionId])
-  @@index([waveId])
-}
-
-model BucketWeight {
-  id        String   @id @default(cuid())
-  waveId    String
-  bucket    String
-  weight    Float
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  wave      Wave     @relation(fields: [waveId], references: [id], onDelete: Cascade)
-
-  @@unique([waveId, bucket])
-  @@index([waveId, isActive])
-}
-
-model ImpactCalculation {
-  id              String                @id @default(cuid())
-  rippleId        String
-  waveId          String
-  calculationType ImpactCalculationType @default(realtime)
-  timeframe       String?
-  totalActions    Int
-  eligibleActions Float
-  impactValue     Float
-  bucketBreakdown Json
-  calculatedAt    DateTime              @default(now())
-  ripple          Ripple                @relation(fields: [rippleId], references: [id], onDelete: Cascade)
-  wave            Wave                  @relation(fields: [waveId], references: [id], onDelete: Cascade)
-
-  @@index([rippleId, calculationType, timeframe])
-  @@index([waveId, calculatedAt])
-}
-
-model ImpactIndex {
-  id              String   @id @default(cuid())
-  rippleId        String   @unique
-  waveId          String
-  indexValue      Float
-  isVisible       Boolean
-  medianImpact30d Float
-  rippleImpact30d Float
-  participants    Int
-  calculatedAt    DateTime @default(now())
-  ripple          Ripple   @relation(fields: [rippleId], references: [id], onDelete: Cascade)
-  wave            Wave     @relation(fields: [waveId], references: [id], onDelete: Cascade)
-
-  @@index([waveId, indexValue])
-  @@index([calculatedAt])
-}
-
-model UserImpactSummary {
-  id                   String   @id @default(cuid())
-  userId               String   @unique
-  totalActions         Int
-  totalEligibleActions Float
-  totalImpact          Float
-  ripplesJoined        Int
-  impactByWave         Json
-  calculatedAt         DateTime @default(now())
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([calculatedAt])
-}
-
-model RippleCounter {
-  id                 String    @id @default(cuid())
-  rippleId           String    @unique
-  waveId             String
-  participantsTotal  Int       @default(0)
-  actions24h         Int       @default(0)
-  actions1h          Int       @default(0)
-  newParticipants24h Int       @default(0)
-  boost              Float     @default(0)
-  topTenSince        DateTime?
-  lastDecay          DateTime?
-  version            Int       @default(0)
-  updatedAt          DateTime  @default(now()) @updatedAt
-  ripple             Ripple    @relation(fields: [rippleId], references: [id], onDelete: Cascade)
-  wave               Wave      @relation(fields: [waveId], references: [id], onDelete: Cascade)
-
-  @@index([waveId, updatedAt])
-}
-
-model TrendingScore {
-  id                 String                  @id @default(cuid())
-  rippleId           String
-  waveId             String
-  calculationType    TrendingCalculationType @default(realtime)
-  score              Float
-  participants       Int
-  actions24h         Int
-  actions1h          Int
-  newParticipants24h Int
-  boost              Float
-  isTopTen           Boolean                 @default(false)
-  topTenDays         Int                     @default(0)
-  calculatedAt       DateTime                @default(now())
-  ripple             Ripple                  @relation(fields: [rippleId], references: [id], onDelete: Cascade)
-  wave               Wave                    @relation(fields: [waveId], references: [id], onDelete: Cascade)
-
-  @@index([rippleId, calculationType])
-  @@index([waveId, score, calculatedAt])
+  @@index([waveId, bucket])
 }
 
 enum TemplateStatus {
@@ -290,15 +200,106 @@ enum TemplateStatus {
   archived
 }
 
-enum TrendingCalculationType {
-  realtime
-  hourly
-  daily
+// ============================================================================
+// IMPACT & TRENDING MODELS
+// ============================================================================
+
+// Impact calculation for a specific ripple and timeframe
+model ImpactCalculation {
+  id               String                @id @default(cuid())
+  rippleId         String
+  waveId           String
+  calculationType  ImpactCalculationType
+  totalImpact      Float
+  actionCount      Int
+  participantCount Int
+  calculatedAt     DateTime              @default(now())
+  ripple           Ripple                @relation(fields: [rippleId], references: [id], onDelete: Cascade)
+  wave             Wave                  @relation(fields: [waveId], references: [id], onDelete: Cascade)
+
+  @@unique([rippleId, calculationType])
+  @@index([waveId, calculationType])
+  @@index([calculatedAt])
 }
 
-enum ImpactCalculationType {
-  realtime
-  daily
-  monthly
-  custom
+// Impact index showing relative performance of a ripple
+model ImpactIndex {
+  id                    String   @id @default(cuid())
+  rippleId              String   @unique
+  waveId                String
+  medianImpact          Float
+  rippleImpact          Float
+  indexScore            Float // 0.5x to 3.0x multiplier
+  participantCount      Int
+  aboveMedianRipples    Int
+  totalActiveRipples    Int
+  calculatedAt          DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  ripple                Ripple   @relation(fields: [rippleId], references: [id], onDelete: Cascade)
+  wave                  Wave     @relation(fields: [waveId], references: [id], onDelete: Cascade)
+
+  @@index([waveId, indexScore])
+  @@index([calculatedAt])
+}
+
+// User's aggregated impact summary across all waves
+model UserImpactSummary {
+  userId                String   @id
+  totalImpact7d         Float    @default(0)
+  totalImpact30d        Float    @default(0)
+  totalImpactAllTime    Float    @default(0)
+  actionCount7d         Int      @default(0)
+  actionCount30d        Int      @default(0)
+  actionCountAllTime    Int      @default(0)
+  activeRipples         Int      @default(0)
+  topWaveId             String?
+  topWaveImpact         Float    @default(0)
+  calculatedAt          DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([totalImpactAllTime])
+  @@index([calculatedAt])
+}
+
+// Real-time counters for ripple trending
+model RippleCounter {
+  id                      String   @id @default(cuid())
+  rippleId                String   @unique
+  waveId                  String
+  participants            Int      @default(0)
+  actions24h              Int      @default(0)
+  actions1h               Int      @default(0)
+  newParticipants24h      Int      @default(0)
+  version                 Int      @default(0) // For optimistic locking
+  lastActionAt            DateTime?
+  updatedAt               DateTime @updatedAt
+  ripple                  Ripple   @relation(fields: [rippleId], references: [id], onDelete: Cascade)
+  wave                    Wave     @relation(fields: [waveId], references: [id], onDelete: Cascade)
+
+  @@index([waveId])
+  @@index([lastActionAt])
+}
+
+// Trending score snapshots for leaderboard
+model TrendingScore {
+  id                      String                  @id @default(cuid())
+  rippleId                String
+  waveId                  String
+  calculationType         TrendingCalculationType
+  score                   Float
+  participants            Int
+  actions24h              Int
+  actions1h               Int
+  newParticipants24h      Int
+  boost                   Float                   @default(0)
+  isTopTen                Boolean                 @default(false)
+  topTenDays              Int                     @default(0)
+  calculatedAt            DateTime                @default(now())
+  ripple                  Ripple                  @relation(fields: [rippleId], references: [id], onDelete: Cascade)
+  wave                    Wave                    @relation(fields: [waveId], references: [id], onDelete: Cascade)
+
+  @@index([waveId, score])
+  @@index([calculatedAt])
+  @@index([score])
 }

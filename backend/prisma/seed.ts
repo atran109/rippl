@@ -301,7 +301,6 @@ async function main() {
   await prisma.microAction.deleteMany();
   await prisma.template.deleteMany();
   await prisma.waveBucket.deleteMany();
-  await prisma.bucketWeight.deleteMany();
   await prisma.ripple.deleteMany();
   await prisma.wave.deleteMany();
 
@@ -321,28 +320,22 @@ async function main() {
       },
     });
 
-    // Create WaveBucket entries for this wave
+    // Create WaveBucket entries for this wave (with weights if provided)
+    const weightsMap = new Map<string, number>();
+    if (w.bucketWeights) {
+      for (const bw of w.bucketWeights) {
+        weightsMap.set(bw.bucket, bw.weight);
+      }
+    }
     for (const bucket of w.allowedBuckets) {
       await prisma.waveBucket.create({
         data: {
           waveId: wave.id,
           name: bucket,
+          weight: weightsMap.get(bucket) ?? 1.0,
+          isActive: true,
         },
       });
-    }
-
-    // Create BucketWeight entries if provided
-    if (w.bucketWeights) {
-      for (const bw of w.bucketWeights) {
-        await prisma.bucketWeight.create({
-          data: {
-            waveId: wave.id,
-            bucket: bw.bucket,
-            weight: bw.weight,
-            isActive: true,
-          },
-        });
-      }
     }
 
     for (const r of w.ripples) {
@@ -364,11 +357,11 @@ async function main() {
         data: {
           rippleId: ripple.id,
           waveId: wave.id,
-          participantsTotal: 0,
+          participants: 0,
           actions24h: 0,
           actions1h: 0,
           newParticipants24h: 0,
-          boost: 0,
+          version: 0,
         },
       });
 

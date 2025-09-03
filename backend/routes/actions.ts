@@ -3,6 +3,8 @@ import { prisma } from "../src/db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { z } from "zod";
 import { redis } from "../src/redis.js";
+import { impactCalculationService } from "../src/services/impact/ImpactCalculationService.js";
+import { trendingCalculationService } from "../src/services/trending/TrendingCalculationService.js";
 
 //writes ActionLog, bumps Redis counters, optional note with length and toxicity checks, drops a simple RippleActivity row
 
@@ -119,11 +121,19 @@ router.post("/complete", requireAuth, async (req, res) => {
     },
   });
 
-  // Redis counters for trending: actions_24h / actions_1h / boost
-  const key = `ripple:${ma.rippleId}`;
-  await redis.hincrby(key, "actions_24h", 1);
-  await redis.hincrby(key, "actions_1h", 1);
-  await redis.hincrbyfloat(key, "boost", 10);
+  // ✨ NEW: Trigger impact and trending calculations
+  try {
+    // Update trending counters (Redis + database sync)
+    await trendingCalculationService.onActionCompleted(ma.rippleId);
+    
+    // Update impact calculations (user summary + ripple impact)
+    await impactCalculationService.onActionCompleted(userId, ma.rippleId);
+    
+    console.log(`✅ Action completed and calculations triggered for user ${userId}, ripple ${ma.rippleId}`);
+  } catch (error) {
+    console.error(`❌ Error in post-action calculations:`, error);
+    // Don't fail the request - calculations are not critical for action completion
+  }
 
   res.json({ ok: true });
 });

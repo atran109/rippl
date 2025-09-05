@@ -8,6 +8,7 @@ import actionsRouter from '../routes/actions.js'
 import generationRouter from '../routes/generation.js'
 import wavesRouter from '../routes/waves.js'
 import storiesRouter from '../routes/stories.js'
+import trendingRouter from '../routes/trending.js'
 
 const app = express();
 app.use(cors());
@@ -23,6 +24,7 @@ app.use("/actions", actionsRouter)
 app.use("/waves", wavesRouter)
 app.use("/", generationRouter)
 app.use("/", storiesRouter)
+app.use("/", trendingRouter)
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`API running http://localhost:${PORT}`));

@@ -119,11 +119,16 @@ router.post("/complete", requireAuth, async (req, res) => {
     },
   });
 
-  // Redis counters for trending: actions_24h / actions_1h / boost
-  const key = `ripple:${ma.rippleId}`;
-  await redis.hincrby(key, "actions_24h", 1);
-  await redis.hincrby(key, "actions_1h", 1);
-  await redis.hincrbyfloat(key, "boost", 10);
+  // Redis trending signals using sorted sets (time windows) + boost
+  const now = Date.now();
+  const rippleId = ma.rippleId;
+  
+  // Track action in time-windowed sorted set
+  await redis.zadd(`ripple:${rippleId}:actions`, now, `${now}-${userId}`);
+  
+  // Boost impulse with decay tracking
+  await redis.hincrbyfloat(`ripple:${rippleId}`, "boost", 10);
+  await redis.hset(`ripple:${rippleId}`, "last_boost_ts", now);
 
   res.json({ ok: true });
 });

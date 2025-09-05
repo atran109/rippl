@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../src/db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { redis } from "../src/redis.js";
 import { z } from "zod";
 
 const router = Router();
@@ -65,6 +66,10 @@ router.post("/join-wave", requireAuth, async (req, res) => {
     });
   }
 
+  // Redis trending signal: track join in time-windowed sorted set
+  const now = Date.now();
+  await redis.zadd(`ripple:${starter.id}:joins`, now, `${now}-${userId}`);
+
   res.json({ ok: true, primary_ripple_id: starter.id });
 });
 
@@ -88,6 +93,10 @@ router.post("/ripple/:id/join", requireAuth, async (req, res) => {
       where: { id: up.id },
       data: { isPrimary: true },
     });
+
+  // Redis trending signal: track join in time-windowed sorted set
+  const now = Date.now();
+  await redis.zadd(`ripple:${id}:joins`, now, `${now}-${userId}`);
 
   res.json({ ok: true });
 });

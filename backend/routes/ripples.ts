@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../src/db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { getTrendingInfo } from "./trending.js";
 
 const router = Router();
 //Returns hero stats (from RippleSummary), membership, and 3-5 recent blurbs
@@ -34,6 +35,9 @@ router.get("/:id", requireAuth, async (req, res) => {
     take: 5,
   });
 
+  // Get trending info if ripple is in top 10
+  const trending = await getTrendingInfo(id);
+
   res.json({
     id: ripple.id,
     title: ripple.title,
@@ -62,6 +66,7 @@ router.get("/:id", requireAuth, async (req, res) => {
       is_primary: !!membership?.isPrimary,
     },
     recent_activity: recent.map((r) => ({ city: r.city, blurb: r.blurb })),
+    ...(trending && { trending })
   });
 });
 

@@ -15,10 +15,14 @@ router.get("/home", requireAuth, async (req, res) => {
     include: { ripple: { include: { wave: true } } },
   });
 
+
   if (!primary?.ripple) {
     return res.json({
       today_action: null,
       message: "No primary ripple yet. Join a wave to get started.",
+      has_wave: false,
+      wave: null,
+      primary_ripple: null,
     });
   }
 
@@ -28,8 +32,22 @@ router.get("/home", requireAuth, async (req, res) => {
   });
   if (count === 0)
     return res.json({
+      primary_ripple: {
+        id: primary.ripple.id,
+        title: primary.ripple.title,
+        wave: { id: primary.ripple.wave.id, name: primary.ripple.wave.name },
+      },
+      wave: {
+        id: primary.ripple.wave.id,
+        name: primary.ripple.wave.name,
+        description: primary.ripple.wave.description,
+        icon: primary.ripple.wave.icon,
+        impactUnit: primary.ripple.wave.impactUnit,
+        impactSource: primary.ripple.wave.impactSource,
+      },
       today_action: null,
       message: "No actions available in primary ripple.",
+      has_wave: true,
     });
 
   const skip = Math.floor(Math.random() * count);
@@ -45,9 +63,18 @@ router.get("/home", requireAuth, async (req, res) => {
       title: primary.ripple.title,
       wave: { id: primary.ripple.wave.id, name: primary.ripple.wave.name },
     },
+    wave: {
+      id: primary.ripple.wave.id,
+      name: primary.ripple.wave.name,
+      description: primary.ripple.wave.description,
+      icon: primary.ripple.wave.icon,
+      impactUnit: primary.ripple.wave.impactUnit,
+      impactSource: primary.ripple.wave.impactSource,
+    },
     today_action: ma ? { id: ma.id, text: ma.text, bucket: ma.bucket } : null,
     // Impact chip is implemented later (after ActionLogs/Impact worker)
     impact_chip: null,
+    has_wave: true,
   });
 });
 

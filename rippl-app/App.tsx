@@ -1,3 +1,5 @@
+import 'react-native-gesture-handler';
+import 'react-native-reanimated';
 import './global.css';
 import React, { useState, useEffect, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
@@ -5,15 +7,19 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Text, View, TouchableOpacity } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Text, View } from 'react-native';
 
 import { RootStackParamList } from './src/types/navigation';
-import { getToken, api, removeToken } from './src/lib/api';
+import { getToken, api } from './src/lib/api';
 
 // Import screens
 import LoginScreen from './src/screens/LoginScreen';
 import RegistrationScreen from './src/screens/RegistrationScreen';
 import WaveSelectionScreen from './src/screens/WaveSelectionScreen';
+import HomeScreen from './src/screens/HomeScreen';
+import CommunityScreen from './src/screens/CommunityScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const queryClient = new QueryClient();
@@ -39,18 +45,28 @@ export default function App() {
       const homeData = await api.getHome();
       console.log('📊 Home data:', homeData);
       
-      // If they have a primary ripple, they're fully authenticated
-      if (homeData.primary_ripple) {
-        console.log('✅ User has primary ripple, setting authenticated');
+      // Use the has_wave field to determine authentication state
+      if (homeData.has_wave === true) {
+        console.log('✅ User has joined a wave, setting authenticated');
         setAuthState('authenticated');
-      } else {
-        console.log('⏳ User has no primary ripple, setting onboarding');
+      } else if (homeData.has_wave === false) {
+        console.log('⏳ User has not joined a wave yet, setting onboarding');
         setAuthState('onboarding');
+      } else {
+        // Fallback to old logic if has_wave is not provided
+        console.log('🔄 Using fallback logic with primary_ripple check');
+        if (homeData.primary_ripple) {
+          console.log('✅ User has primary ripple, setting authenticated');
+          setAuthState('authenticated');
+        } else {
+          console.log('⏳ User has no primary ripple, setting onboarding');
+          setAuthState('onboarding');
+        }
       }
     } catch (error) {
-      // If home call fails, they might need to complete onboarding
-      console.log('❌ Home API failed:', error);
-      setAuthState('onboarding');
+      console.error('❌ Home API failed:', error);
+      // Token is invalid, remove it and set to unauthenticated
+      setAuthState('unauthenticated');
     }
   }, []);
 
@@ -70,9 +86,10 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
-      <QueryClientProvider client={queryClient}>
-        <NavigationContainer>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <NavigationContainer>
           <StatusBar style="auto" />
           <Stack.Navigator
             screenOptions={{
@@ -82,26 +99,9 @@ export default function App() {
             {authState === 'authenticated' ? (
               // Fully authenticated and onboarded users
               <>
-                <Stack.Screen name="Main">
-                  {() => (
-                    <View className="flex-1 bg-white items-center justify-center">
-                      <Text className="text-2xl text-gray-800">Welcome to RIPPL!</Text>
-                      <Text className="text-gray-600">Main app coming soon...</Text>
-                      
-                      {/* Temporary logout button for testing */}
-                      <TouchableOpacity
-                        className="mt-8 bg-red-500 px-6 py-3 rounded-lg"
-                        onPress={async () => {
-                          await removeToken();
-                          checkAuthState();
-                        }}
-                      >
-                        <Text className="text-white font-semibold">Logout (Test Only)</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </Stack.Screen>
-                {/* More authenticated screens will be added later */}
+                <Stack.Screen name="Home" component={HomeScreen} />
+                <Stack.Screen name="Community" component={CommunityScreen} />
+                <Stack.Screen name="Profile" component={ProfileScreen} />
               </>
             ) : authState === 'onboarding' ? (
               // Registered but needs to complete onboarding
@@ -122,8 +122,9 @@ export default function App() {
               </>
             )}
           </Stack.Navigator>
-        </NavigationContainer>
-      </QueryClientProvider>
-    </SafeAreaProvider>
+          </NavigationContainer>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

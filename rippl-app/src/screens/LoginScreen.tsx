@@ -27,8 +27,8 @@ export default function LoginScreen({ onComplete }: LoginScreenProps) {
         // Trigger App-level auth check which switches stacks
         onComplete();
       } else {
-        // Fallback: reset to Main
-        navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+        // Fallback: route to Home in authenticated stack
+        navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
       }
     },
     onError: (error) => {

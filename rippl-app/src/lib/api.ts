@@ -40,10 +40,12 @@ export const RippleSchema = z.object({
 
 //Change later when things like impact and trending are done
 export const HomeResponseSchema = z.object({
+  wave: WaveSchema.nullable().optional(),
   primary_ripple: RippleSchema.nullable().optional(),
   today_action: MicroActionSchema.nullable().optional(),
   impact_chip: z.any().nullable().optional(), // TODO: refine when implemented
   message: z.string().optional(),
+  has_wave: z.boolean().optional(), // Whether user has joined a wave
 });
 
 export const AuthResponseSchema = z.object({

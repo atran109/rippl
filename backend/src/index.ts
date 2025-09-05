@@ -7,6 +7,7 @@ import rippleRouter from '../routes/ripples.js'
 import actionsRouter from '../routes/actions.js'
 import generationRouter from '../routes/generation.js'
 import wavesRouter from '../routes/waves.js'
+import storiesRouter from '../routes/stories.js'
 
 const app = express();
 app.use(cors());
@@ -21,6 +22,7 @@ app.use("/ripple", rippleRouter)
 app.use("/actions", actionsRouter)
 app.use("/waves", wavesRouter)
 app.use("/", generationRouter)
+app.use("/", storiesRouter)
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`API running http://localhost:${PORT}`));

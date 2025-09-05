@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { PrismaClient } from "@prisma/client";
+import { seedPhrases } from "./seedPhrases.js";
 // Use DIRECT_URL for seeding to avoid PgBouncer/port 6543 issues
 const prisma = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL || process.env.DATABASE_URL });
 
@@ -262,9 +263,14 @@ async function main() {
   console.log("Seeding…");
 
   // Clear existing (dev-only convenience)
+  await prisma.actionLog.deleteMany();
+  await prisma.rippleActivity.deleteMany();
+  await prisma.rippleSummary.deleteMany();
+  await prisma.userRipple.deleteMany();
   await prisma.microAction.deleteMany();
   await prisma.template.deleteMany();
   await prisma.waveBucket.deleteMany();
+  await prisma.phraseMap.deleteMany();
   await prisma.ripple.deleteMany();
   await prisma.wave.deleteMany();
 
@@ -399,6 +405,9 @@ async function main() {
       });
     }
   }
+
+  // Seed phrase mappings after waves are created
+  await seedPhrases();
 
   console.log("Seed complete.");
 }

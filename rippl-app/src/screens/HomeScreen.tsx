@@ -28,28 +28,28 @@ interface TopBarProps {
 
 const TopBar: React.FC<TopBarProps> = ({ userPoints }) => {
   return (
-    <View className="flex-row items-center justify-between px-4 py-3">
+    <View className="flex-row items-center justify-between px-5 py-4">
       {/* RIPPL Logo */}
-      <View className="w-[104px] h-6">
+      <View className="w-[120px] h-8">
         <Image
           source={require('../../assets/rippl-logo.png')}
-          className="w-6 h-6"
+          className="w-8 h-8"
           resizeMode="contain"
         />
-        <Text className="text-[#2AABC8] text-lg font-bold ml-8 -mt-6">RIPPL</Text>
+        <Text className="text-[#2AABC8] text-xl font-bold ml-10 -mt-8">RIPPL</Text>
       </View>
 
       {/* Points and Notifications */}
-      <View className="flex-row items-center gap-3">
+      <View className="flex-row items-center gap-4">
         {/* User Points */}
-        <View className="bg-[#f4f4f4] flex-row items-center px-2 py-1 rounded-[18px]">
-          <Ionicons name="person-circle" size={23} color="#2AABC8" />
-          <Text className="text-[#2AABC8] text-lg font-medium ml-2">{userPoints}</Text>
+        <View className="bg-[#f4f4f4] flex-row items-center px-3 py-2 rounded-[20px]">
+          <Ionicons name="person-circle" size={28} color="#2AABC8" />
+          <Text className="text-[#2AABC8] text-xl font-medium ml-2">{userPoints}</Text>
         </View>
         
         {/* Notification Bell */}
-        <TouchableOpacity className="bg-[#ececec] p-2 rounded-full">
-          <Ionicons name="notifications-outline" size={18} color="#666" />
+        <TouchableOpacity className="bg-[#ececec] p-3 rounded-full">
+          <Ionicons name="notifications-outline" size={22} color="#666" />
         </TouchableOpacity>
       </View>
     </View>
@@ -63,22 +63,22 @@ interface RippleTabsProps {
 
 const RippleTabs: React.FC<RippleTabsProps> = ({ activeTab, onTabChange }) => {
   return (
-    <View className="mx-4 mb-4">
+    <View className="mx-5 mb-6">
       <View className="bg-[#f0f0f0] p-1 rounded-2xl flex-row">
         <TouchableOpacity
-          className={`flex-1 py-3 px-4 rounded-xl ${activeTab === 'your' ? 'bg-white shadow-sm' : ''}`}
+          className={`flex-1 py-4 px-4 rounded-xl ${activeTab === 'your' ? 'bg-white shadow-sm' : ''}`}
           onPress={() => onTabChange('your')}
         >
-          <Text className={`text-center font-medium ${activeTab === 'your' ? 'text-black' : 'text-[#9b9b9b]'}`}>
+          <Text className={`text-center font-medium text-base ${activeTab === 'your' ? 'text-black' : 'text-[#9b9b9b]'}`}>
             Your Ripples
           </Text>
         </TouchableOpacity>
         
         <TouchableOpacity
-          className={`flex-1 py-3 px-4 rounded-xl ${activeTab === 'trending' ? 'bg-white shadow-sm' : ''}`}
+          className={`flex-1 py-4 px-4 rounded-xl ${activeTab === 'trending' ? 'bg-white shadow-sm' : ''}`}
           onPress={() => onTabChange('trending')}
         >
-          <Text className={`text-center font-medium ${activeTab === 'trending' ? 'text-black' : 'text-[#9b9b9b]'}`}>
+          <Text className={`text-center font-medium text-base ${activeTab === 'trending' ? 'text-black' : 'text-[#9b9b9b]'}`}>
             Trending Ripples
           </Text>
         </TouchableOpacity>
@@ -106,39 +106,40 @@ const SwipeableRippleCards: React.FC<SwipeableRippleCardsProps> = ({
   onRipplePress 
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const panY = useRef(new Animated.Value(0)).current;
+  const panX = useRef(new Animated.Value(0)).current;
 
   const panResponder = PanResponder.create({
     onMoveShouldSetPanResponder: (_, gestureState) => {
-      return Math.abs(gestureState.dy) > 10;
+      return Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
     },
     onPanResponderGrant: () => {
       // Start fresh without setting offset to avoid buggy behavior
-      panY.setValue(0);
+      panX.setValue(0);
     },
     onPanResponderMove: (_, gestureState) => {
       // Only respond to reasonable movements
-      if (Math.abs(gestureState.dy) < 200) {
-        panY.setValue(gestureState.dy);
+      if (Math.abs(gestureState.dx) < 300) {
+        panX.setValue(gestureState.dx);
       }
     },
     onPanResponderRelease: (_, gestureState) => {
-      const threshold = 50;
+      const threshold = 80;
+      const velocity = gestureState.vx;
       
-      if (gestureState.dy > threshold && currentIndex < ripples.length - 1) {
-        // Swipe down - go to next ripple
+      if ((gestureState.dx < -threshold || velocity < -0.5) && currentIndex < ripples.length - 1) {
+        // Swipe left - go to next ripple
         setCurrentIndex(currentIndex + 1);
-      } else if (gestureState.dy < -threshold && currentIndex > 0) {
-        // Swipe up - go to previous ripple
+      } else if ((gestureState.dx > threshold || velocity > 0.5) && currentIndex > 0) {
+        // Swipe right - go to previous ripple
         setCurrentIndex(currentIndex - 1);
       }
       
-      // Always reset position
-      Animated.spring(panY, {
+      // Always reset position with smooth animation
+      Animated.spring(panX, {
         toValue: 0,
         useNativeDriver: false,
-        tension: 150,
-        friction: 8,
+        tension: 120,
+        friction: 10,
       }).start();
     },
   });
@@ -158,9 +159,9 @@ const SwipeableRippleCards: React.FC<SwipeableRippleCardsProps> = ({
     if (stackOffset < 0 || stackOffset > 2) return null;
 
     const isActive = stackOffset === 0;
-    const translateY = isActive ? panY : stackOffset * 4;
-    const scale = 1 - (stackOffset * 0.03);
-    const opacity = 1 - (stackOffset * 0.15);
+    const translateX = isActive ? panX : stackOffset * 8;
+    const scale = 1 - (stackOffset * 0.05);
+    const opacity = 1 - (stackOffset * 0.2);
 
     return (
       <Animated.View 
@@ -171,7 +172,7 @@ const SwipeableRippleCards: React.FC<SwipeableRippleCardsProps> = ({
           right: 0,
           zIndex: 10 - stackOffset,
           transform: [
-            { translateY },
+            { translateX },
             { scale }
           ],
           opacity,
@@ -229,11 +230,11 @@ const SwipeableRippleCards: React.FC<SwipeableRippleCardsProps> = ({
   };
 
   return (
-    <View className="mb-4">
+    <View className="mb-2">
       <View 
         {...panResponder.panHandlers}
         style={{ 
-          height: 120,
+          height: 140,
           position: 'relative',
         }}
       >
@@ -242,11 +243,11 @@ const SwipeableRippleCards: React.FC<SwipeableRippleCardsProps> = ({
 
       {/* Pagination dots */}
       {ripples.length > 1 && (
-        <View className="flex-row justify-center mt-6 gap-2">
+        <View className="flex-row justify-center mt-3 gap-2">
           {ripples.map((_, index) => (
             <View
               key={index}
-              className={`w-2 h-2 rounded-full ${
+              className={`w-2.5 h-2.5 rounded-full ${
                 index === currentIndex ? 'bg-[#2AABC8]' : 'bg-gray-300'
               }`}
             />
@@ -293,8 +294,8 @@ const ActionCard: React.FC<ActionCardProps> = ({ action, onComplete }) => {
   };
 
   return (
-    <View className="mx-4 mb-6">
-      <Text className="text-black text-lg font-semibold text-center mb-4">Today's Action</Text>
+    <View className="mx-5 mb-6">
+      <Text className="text-black text-xl font-semibold text-center mb-4">Today's Action</Text>
       
       {/* Gradient Action Card (brand) */}
       <View className="rounded-2xl overflow-hidden">
@@ -302,7 +303,7 @@ const ActionCard: React.FC<ActionCardProps> = ({ action, onComplete }) => {
           colors={["#2AABC8", "#4EC9D9"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={{ padding: 16 }}
+          style={{ padding: 20 }}
         >
         {/* Header with count and wave tag */}
         <View className="flex-row items-center justify-between mb-6">
@@ -414,37 +415,37 @@ interface BottomNavigationProps {
 
 const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, onTabChange }) => {
   return (
-    <View className="bg-white border-t border-gray-200 pb-8 pt-3">
+    <View className="bg-white border-t border-gray-200 pb-8 pt-4">
       <View className="flex-row items-center justify-around px-12">
         <TouchableOpacity 
-          className="items-center"
+          className="items-center py-2"
           onPress={() => onTabChange('home')}
         >
           <Ionicons 
             name="home-outline" 
-            size={24} 
+            size={30} 
             color={activeTab === 'home' ? '#2AABC8' : '#666'} 
           />
         </TouchableOpacity>
         
         <TouchableOpacity 
-          className="items-center"
+          className="items-center py-2"
           onPress={() => onTabChange('community')}
         >
           <Ionicons 
             name="people-outline" 
-            size={24} 
+            size={30} 
             color={activeTab === 'community' ? '#2AABC8' : '#666'} 
           />
         </TouchableOpacity>
         
         <TouchableOpacity 
-          className="items-center"
+          className="items-center py-2"
           onPress={() => onTabChange('profile')}
         >
           <Ionicons 
             name="person-outline" 
-            size={24} 
+            size={30} 
             color={activeTab === 'profile' ? '#2AABC8' : '#666'} 
           />
         </TouchableOpacity>
@@ -540,15 +541,17 @@ export default function HomeScreen() {
         <RippleTabs activeTab={rippleTab} onTabChange={setRippleTab} />
 
         {/* Swipeable Ripple Cards */}
-        <SwipeableRippleCards
-          ripples={mockRipples}
-          onRipplePress={(rippleId) => {
-            Alert.alert('Coming Soon', `Ripple detail page for ID: ${rippleId} is under development`);
-          }}
-        />
+        <View className="mt-2">
+          <SwipeableRippleCards
+            ripples={mockRipples}
+            onRipplePress={(rippleId) => {
+              Alert.alert('Coming Soon', `Ripple detail page for ID: ${rippleId} is under development`);
+            }}
+          />
+        </View>
 
-        {/* Spacer to push action card to bottom */}
-        <View className="flex-1" />
+        {/* Minimal spacer for better balance */}
+        <View className="flex-1 min-h-[10px]" />
 
         {/* Action Card */}
         {homeData?.today_action && (

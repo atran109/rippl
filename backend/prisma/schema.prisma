@@ -25,6 +25,7 @@ enum TemplateStatus {
 model WaveBucket {
   waveId String
   name   String // bucket name, e.g., "conversation_checkin"
+  weight Float  @default(1.0) // impact eligibility weight (0.0-1.0)
 
   wave Wave @relation(fields: [waveId], references: [id])
 
@@ -77,6 +78,7 @@ model Wave {
   impactCoef     Float
   impactUnit     String
   impactSource   String
+  impactVersion  String  @default("v1.0") // version for source tracking
   allowedBuckets String // comma-separated list
 
   ripples      Ripple[]      @relation("WaveToRipples")
@@ -122,7 +124,8 @@ model RippleSummary {
   rippleId     String   @id
   participants Int
   actionsTotal Int
-  impactValue  Float
+  impactValue  Float    // lifetime impact
+  impact30d    Float    @default(0) // cached 30-day impact
   impactUnit   String
   impactSource String
   updatedAt    DateTime @default(now())

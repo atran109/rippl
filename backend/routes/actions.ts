@@ -58,10 +58,29 @@ router.post("/complete", requireAuth, async (req, res) => {
 
   // Validate micro-action + look up ripple/wave/bucket
   const ma = await prisma.microAction.findUnique({
-    where: { id: microActionId },
-    include: { ripple: { include: { wave: true } } },
+    where: { id: microActionId }
   });
   if (!ma) return res.status(404).json({ error: "Micro-action not found" });
+
+  // Get ripple with wave and summary info for impact calculation
+  const ripple = await prisma.ripple.findUnique({
+    where: { id: ma.rippleId },
+    include: { 
+      wave: {
+        select: {
+          impactCoef: true,
+          impactUnit: true,
+          impactSource: true
+        }
+      }
+    }
+  });
+  if (!ripple) return res.status(404).json({ error: "Ripple not found" });
+
+  // Get ripple summary separately
+  const summary = await prisma.rippleSummary.findUnique({
+    where: { rippleId: ma.rippleId }
+  });
 
   // Notes guardrails
   if (note_text && note_text.length > MAX_NOTE) {
@@ -85,13 +104,64 @@ router.post("/complete", requireAuth, async (req, res) => {
       userId,
       microActionId: ma.id,
       rippleId: ma.rippleId,
-      waveId: ma.ripple.waveId,
+      waveId: ripple.waveId,
       bucket: ma.bucket,
       city,
       noteText: note_text,
       shareAnon: !!share_anonymously,
     },
   });
+
+  // Calculate and increment impact (lifetime)
+  try {
+    // Get the bucket weight for impact eligibility
+    const bucketWeight = await prisma.waveBucket.findUnique({
+      where: {
+        waveId_name: {
+          waveId: ripple.waveId,
+          name: ma.bucket
+        }
+      },
+      select: { weight: true }
+    });
+    
+    if (bucketWeight) {
+      // Calculate impact delta: weight * coefficient
+      const deltaImpact = bucketWeight.weight * ripple.wave.impactCoef;
+      
+      // Update RippleSummary lifetime impact
+      if (summary) {
+        await prisma.rippleSummary.update({
+          where: { rippleId: ma.rippleId },
+          data: { 
+            impactValue: { increment: deltaImpact },
+            actionsTotal: { increment: 1 }
+          }
+        });
+      } else {
+        // Create summary if it doesn't exist
+        await prisma.rippleSummary.create({
+          data: {
+            rippleId: ma.rippleId,
+            participants: 0, // Will be updated by workers
+            actionsTotal: 1,
+            impactValue: deltaImpact,
+            impact30d: 0, // Will be computed by worker
+            impactUnit: ripple.wave.impactUnit,
+            impactSource: ripple.wave.impactSource
+          }
+        });
+      }
+      
+      // Invalidate 30-day impact caches for user, ripple, and wave
+      await redis.del(`impact:user:${userId}:30d`);
+      await redis.del(`impact:ripple:${ma.rippleId}:30d`);
+      await redis.del(`impact:wave:${ripple.waveId}:30d`);
+    }
+  } catch (error) {
+    console.warn('Impact calculation failed (non-blocking):', error);
+    // Don't fail the action if impact calculation fails
+  }
 
   // Very lightweight activity blurb (worker will aggregate later)
   // minimal phrasing by bucket; expand later

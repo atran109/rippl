@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from "express";
 import cors from "cors";
 import authRouter from "../routes/auth.js";
@@ -9,6 +10,7 @@ import generationRouter from '../routes/generation.js'
 import wavesRouter from '../routes/waves.js'
 import storiesRouter from '../routes/stories.js'
 import trendingRouter from '../routes/trending.js'
+import impactRouter from '../routes/impact.js'
 
 const app = express();
 app.use(cors());
@@ -25,6 +27,7 @@ app.use("/waves", wavesRouter)
 app.use("/", generationRouter)
 app.use("/", storiesRouter)
 app.use("/", trendingRouter)
+app.use("/", impactRouter)
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`API running http://localhost:${PORT}`));

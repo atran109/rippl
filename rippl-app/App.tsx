@@ -94,6 +94,7 @@ export default function App() {
           <Stack.Navigator
             screenOptions={{
               headerShown: false,
+              animation: 'none', // Remove slide animations for seamless switching
             }}
           >
             {authState === 'authenticated' ? (

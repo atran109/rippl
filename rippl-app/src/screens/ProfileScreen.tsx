@@ -213,7 +213,7 @@ interface BottomNavigationProps {
 
 const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, onTabChange }) => {
   return (
-    <View style={{ backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#e5e5e5', paddingBottom: 34, paddingTop: 16 }}>
+    <View style={{ backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#e5e7eb', paddingBottom: 34, paddingTop: 16 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', paddingHorizontal: 48 }}>
         <TouchableOpacity
           style={{ alignItems: 'center', paddingVertical: 8 }}
@@ -222,7 +222,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, onTabCha
           <Ionicons
             name="home-outline"
             size={30}
-            color={activeTab === 'home' ? '#2AABC8' : '#666'}
+            color={activeTab === 'home' ? '#666' : '#666'}
           />
         </TouchableOpacity>
 
@@ -233,7 +233,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, onTabCha
           <Ionicons
             name="people-outline"
             size={30}
-            color={activeTab === 'community' ? '#2AABC8' : '#666'}
+            color={activeTab === 'community' ? '#666' : '#666'}
           />
         </TouchableOpacity>
 
@@ -244,7 +244,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, onTabCha
           <Ionicons
             name="person-outline"
             size={30}
-            color={activeTab === 'profile' ? '#2AABC8' : '#666'}
+            color={activeTab === 'profile' ? '#666' : '#666'}
           />
         </TouchableOpacity>
       </View>
@@ -310,14 +310,6 @@ export default function ProfileScreen() {
     },
   };
 
-  if (profileLoading) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#2AABC8', justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ color: 'white', fontSize: 18 }}>Loading...</Text>
-      </SafeAreaView>
-    );
-  }
-
   const username = profileData?.username || 'AmbitiousWave';
   const userDream = profileData?.dream || 'This is a short profile description';
   const waveName = homeData?.wave?.name || 'Environment';
@@ -331,6 +323,15 @@ export default function ProfileScreen() {
       setEditedDream(profileData.dream || '');
     }
   }, [profileData]);
+
+  // Show loading screen if profile data is still loading
+  if (profileLoading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#2AABC8', justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ color: 'white', fontSize: 18 }}>Loading...</Text>
+      </SafeAreaView>
+    );
+  }
 
   const handleBottomTabChange = (tab: 'home' | 'community' | 'profile') => {
     if (tab === 'home') {
@@ -446,7 +447,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#2AABC8' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
       {/* Top section with gradient background */}
       <View style={{ backgroundColor: '#2AABC8', paddingBottom: 20 }}>
         {/* Header with notification and points */}

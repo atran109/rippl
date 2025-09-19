@@ -75,6 +75,7 @@ model Wave {
   name           String  @unique
   description    String
   icon           String?
+  color          String  @default("#2AABC8") // hex color for UI display
   impactCoef     Float
   impactUnit     String
   impactSource   String

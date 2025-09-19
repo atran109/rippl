@@ -64,6 +64,28 @@ export const JoinWaveResponseSchema = z.object({
   primary_ripple_id: z.string(),
 });
 
+export const TrendingRippleSchema = z.object({
+  rank: z.number(),
+  ripple: z.object({
+    id: z.string(),
+    title: z.string(),
+  }),
+  wave: z.object({
+    id: z.string(),
+    name: z.string(),
+    icon: z.string().optional(),
+  }),
+  participants: z.number(),
+  growth_today: z.number(),
+  actions_24h: z.number(),
+  score: z.number(),
+  impact_chip: z.object({
+    value: z.number(),
+    unit: z.string(),
+    source: z.string(),
+  }).nullable().optional(),
+});
+
 // Types inferred from schemas
 export type Wave = z.infer<typeof WaveSchema>;
 export type User = z.infer<typeof UserSchema>;
@@ -73,6 +95,7 @@ export type HomeResponse = z.infer<typeof HomeResponseSchema>;
 export type AuthResponse = z.infer<typeof AuthResponseSchema>;
 export type RegisterResponse = z.infer<typeof RegisterResponseSchema>;
 export type JoinWaveResponse = z.infer<typeof JoinWaveResponseSchema>;
+export type TrendingRipple = z.infer<typeof TrendingRippleSchema>;
 
 // Auth token management
 export const getToken = async (): Promise<string | null> => {
@@ -206,4 +229,9 @@ export const api = {
         ...(shareAnonymously !== undefined && { share_anonymously: shareAnonymously }),
       }),
     }, z.object({ ok: z.boolean() })),
+
+  // Trending
+  getTrendingRipples: (scope: 'my_waves' | 'all' = 'my_waves', limit: number = 10) =>
+    //problem might be here
+    fetchJson(`/community/trending?scope=${scope}&limit=${limit}`, {}, z.array(TrendingRippleSchema)),
 };

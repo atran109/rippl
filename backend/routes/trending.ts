@@ -114,11 +114,10 @@ router.post('/admin/calculate-trending', async (req, res) => {
     const result = await runTrendingCalculation();
     
     res.json({
-      success: result.success,
+      ...result,
       message: result.success 
         ? `Processed ${result.processed} ripples in ${result.duration}ms`
-        : `Failed: ${result.error}`,
-      ...result
+        : `Failed: ${result.error}`
     });
   } catch (error) {
     console.error('Manual trending calculation failed:', error);
@@ -234,12 +233,11 @@ async function hydrateRippleCards(rippleIds: string[]): Promise<any[]> {
         if (ripple) {
           const now = Date.now();
           const day_ago = now - (24 * 60 * 60 * 1000);
-          
           const [actions_24h, joins_24h] = await Promise.all([
             redis.zcount(`ripple:${rippleId}:actions`, day_ago, now),
             redis.zcount(`ripple:${rippleId}:joins`, day_ago, now)
           ]);
-          
+
           results.push({
             rank: i + 1,
             ripple: { id: ripple.id, title: ripple.title },

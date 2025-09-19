@@ -13,15 +13,10 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { MicroAction } from '../lib/api';
-import type { RootStackParamList } from '../types/navigation';
+import type { MicroAction, TrendingRipple } from '../lib/api';
 import { api } from '../lib/api';
 
-
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-
+const DEFAULT_WAVE_BADGE_COLOR = '#2AABC8';
 interface TopBarProps {
   userPoints: number;
 }
@@ -62,23 +57,65 @@ interface RippleTabsProps {
 }
 
 const RippleTabs: React.FC<RippleTabsProps> = ({ activeTab, onTabChange }) => {
+  const handleTabPress = (tab: 'your' | 'trending') => {
+    console.log('🔵 Tab pressed:', tab);
+    try {
+      onTabChange(tab);
+      console.log('✅ Tab change successful');
+    } catch (error) {
+      console.error('❌ Tab change error:', error);
+    }
+  };
+
   return (
-    <View className="mx-5 mb-6">
-      <View className="bg-[#f0f0f0] p-1 rounded-2xl flex-row">
+    <View style={{ marginHorizontal: 20, marginBottom: 24 }}>
+      <View style={{ backgroundColor: '#f0f0f0', padding: 4, borderRadius: 16, flexDirection: 'row' }}>
         <TouchableOpacity
-          className={`flex-1 py-4 px-4 rounded-xl ${activeTab === 'your' ? 'bg-white shadow-sm' : ''}`}
-          onPress={() => onTabChange('your')}
+          style={{
+            flex: 1,
+            paddingVertical: 16,
+            paddingHorizontal: 16,
+            borderRadius: 12,
+            backgroundColor: activeTab === 'your' ? 'white' : 'transparent',
+            shadowColor: activeTab === 'your' ? '#000' : 'transparent',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.1,
+            shadowRadius: 2,
+            elevation: activeTab === 'your' ? 2 : 0,
+          }}
+          onPress={() => handleTabPress('your')}
         >
-          <Text className={`text-center font-medium text-base ${activeTab === 'your' ? 'text-black' : 'text-[#9b9b9b]'}`}>
+          <Text style={{
+            textAlign: 'center',
+            fontWeight: '500',
+            fontSize: 16,
+            color: activeTab === 'your' ? 'black' : '#9b9b9b'
+          }}>
             Your Ripples
           </Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity
-          className={`flex-1 py-4 px-4 rounded-xl ${activeTab === 'trending' ? 'bg-white shadow-sm' : ''}`}
-          onPress={() => onTabChange('trending')}
+          style={{
+            flex: 1,
+            paddingVertical: 16,
+            paddingHorizontal: 16,
+            borderRadius: 12,
+            backgroundColor: activeTab === 'trending' ? 'white' : 'transparent',
+            shadowColor: activeTab === 'trending' ? '#000' : 'transparent',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.1,
+            shadowRadius: 2,
+            elevation: activeTab === 'trending' ? 2 : 0,
+          }}
+          onPress={() => handleTabPress('trending')}
         >
-          <Text className={`text-center font-medium text-base ${activeTab === 'trending' ? 'text-black' : 'text-[#9b9b9b]'}`}>
+          <Text style={{
+            textAlign: 'center',
+            fontWeight: '500',
+            fontSize: 16,
+            color: activeTab === 'trending' ? 'black' : '#9b9b9b'
+          }}>
             Trending Ripples
           </Text>
         </TouchableOpacity>
@@ -93,7 +130,6 @@ interface Ripple {
   participants: number;
   impactIndex: number;
   waveTag: string;
-  waveColor: string;
 }
 
 interface SwipeableRippleCardsProps {
@@ -196,11 +232,11 @@ const SwipeableRippleCards: React.FC<SwipeableRippleCardsProps> = ({
             </Text>
             <View 
               className="px-1.5 py-0.5 rounded-full border"
-              style={{ borderColor: ripple.waveColor }}
+              style={{ borderColor: DEFAULT_WAVE_BADGE_COLOR }}
             >
               <Text 
                 className="text-[10px] font-normal"
-                style={{ color: ripple.waveColor }}
+                style={{ color: DEFAULT_WAVE_BADGE_COLOR }}
               >
                 {ripple.waveTag}
               </Text>
@@ -455,9 +491,11 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, onTabCha
 };
 
 export default function HomeScreen() {
-  const navigation = useNavigation<NavigationProp>();
   const [rippleTab, setRippleTab] = useState<'your' | 'trending'>('your');
   const [bottomTab, setBottomTab] = useState<'home' | 'community' | 'profile'>('home');
+
+  // Debug logging for tab changes
+  console.log('🔄 HomeScreen render, rippleTab:', rippleTab);
 
   // Fetch home data
   const { data: homeData, isLoading, error } = useQuery({
@@ -465,7 +503,35 @@ export default function HomeScreen() {
     queryFn: api.getHome,
   });
 
-  // Mock data for multiple ripples with dynamic colors
+  // Fetch trending ripples
+  const { data: trendingData, isLoading: trendingLoading, error: trendingError } = useQuery({
+    queryKey: ['trending-ripples'],
+    queryFn: () => api.getTrendingRipples('my_waves', 5),
+    enabled: rippleTab === 'trending',
+    retry: false,
+    throwOnError: false,
+  });
+
+  if (trendingError) {
+    if (trendingError instanceof Error) {
+      console.error('Trending ripples failed:', trendingError.message);
+    } else {
+      console.error('Trending ripples failed:', trendingError);
+    }
+  } else if (trendingData) {
+    console.log('Trending ripples loaded:', trendingData);
+  }
+
+  // Helper function to convert TrendingRipple to Ripple format
+  const convertTrendingToRipple = (trending: TrendingRipple): Ripple => ({
+    id: trending.ripple.id,
+    title: trending.ripple.title,
+    participants: trending.participants,
+    impactIndex: trending.impact_chip?.value || 0,
+    waveTag: trending.wave.name,
+  });
+
+  // Mock data for "Your Ripples"
   const mockRipples: Ripple[] = [
     {
       id: '1',
@@ -473,7 +539,6 @@ export default function HomeScreen() {
       participants: 127,
       impactIndex: 1.02,
       waveTag: homeData?.primary_ripple?.wave?.name || 'Mental Health',
-      waveColor: '#289434',
     },
     {
       id: '2', 
@@ -481,7 +546,6 @@ export default function HomeScreen() {
       participants: 89,
       impactIndex: 0.76,
       waveTag: 'Environment',
-      waveColor: '#2AABC8',
     },
     {
       id: '3',
@@ -489,9 +553,34 @@ export default function HomeScreen() {
       participants: 203,
       impactIndex: 1.47,
       waveTag: 'Hunger Relief', 
-      waveColor: '#E67E22',
     },
   ];
+
+  // Create simple mock trending ripples without API dependency
+  const mockTrendingRipples: Ripple[] = [
+    {
+      id: 'trending-1',
+      title: 'Trending Mental Health Initiative',
+      participants: 89,
+      impactIndex: 1.2,
+      waveTag: 'Mental Health',
+    },
+    {
+      id: 'trending-2',
+      title: 'Community Garden Trending',
+      participants: 156,
+      impactIndex: 0.8,
+      waveTag: 'Environment',
+    }
+  ];
+
+  // Get ripples based on selected tab
+  const currentRipples = rippleTab === 'trending'
+    ? (trendingData?.map(convertTrendingToRipple) || mockTrendingRipples)
+    : mockRipples;
+
+  // Show loading for trending when appropriate
+  const showTrendingLoading = rippleTab === 'trending' && trendingLoading;
 
   const handleCompleteAction = (note?: string) => {
     // TODO: Call API to complete action with note
@@ -506,10 +595,12 @@ export default function HomeScreen() {
 
   const handleBottomTabChange = (tab: 'home' | 'community' | 'profile') => {
     setBottomTab(tab);
+    // For now, just handle tab state changes
+    // TODO: Add navigation when the navigation context issue is resolved
     if (tab === 'community') {
-      navigation.navigate('Community');
+      console.log('Navigate to Community');
     } else if (tab === 'profile') {
-      navigation.navigate('Profile');
+      console.log('Navigate to Profile');
     }
     // If home is selected, we're already on the home screen
   };
@@ -542,12 +633,23 @@ export default function HomeScreen() {
 
         {/* Swipeable Ripple Cards */}
         <View className="mt-2">
-          <SwipeableRippleCards
-            ripples={mockRipples}
-            onRipplePress={(rippleId) => {
-              Alert.alert('Coming Soon', `Ripple detail page for ID: ${rippleId} is under development`);
-            }}
-          />
+          {showTrendingLoading ? (
+            <View className="mx-4 mb-4 p-8 bg-[#f0f0f0] rounded-2xl items-center">
+              <Text className="text-gray-500">Loading trending ripples...</Text>
+            </View>
+          ) : rippleTab === 'trending' && trendingError ? (
+            <View className="mx-4 mb-4 p-8 bg-[#f0f0f0] rounded-2xl items-center">
+              <Text className="text-gray-500">Unable to load trending ripples</Text>
+              <Text className="text-gray-400 text-sm mt-2">Please try again later</Text>
+            </View>
+          ) : (
+            <SwipeableRippleCards
+              ripples={currentRipples}
+              onRipplePress={(rippleId) => {
+                Alert.alert('Coming Soon', `Ripple detail page for ID: ${rippleId} is under development`);
+              }}
+            />
+          )}
         </View>
 
         {/* Minimal spacer for better balance */}

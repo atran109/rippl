@@ -9,6 +9,7 @@ type WaveSeed = {
   name: string;
   description: string;
   icon?: string;
+  color: string;
   impactCoef: number;
   impactUnit: string;
   impactSource: string;
@@ -29,6 +30,7 @@ const waves: WaveSeed[] = [
     name: "Mental Health",
     description: "Reduce stigma and normalize healthy conversations.",
     icon: "🧠",
+    color: "#289434",
     impactCoef: -0.006, // example: -0.006 stigma index per eligible action
     impactUnit: "stigma index points",
     impactSource: "WHO 2024",
@@ -123,6 +125,7 @@ const waves: WaveSeed[] = [
     name: "Environment",
     description: "Small actions, cleaner planet.",
     icon: "🌍",
+    color: "#2AABC8",
     impactCoef: 0.09, // 0.09 kg per eligible action (example)
     impactUnit: "kg litter removed",
     impactSource: "EPA 2023 (conservative avg item weight)",
@@ -207,6 +210,7 @@ const waves: WaveSeed[] = [
     name: "Community & Equity",
     description: "Small local steps that add up.",
     icon: "🤝",
+    color: "#E67E22",
     impactCoef: 1, // placeholder; later switch to verified local $ directed
     impactUnit: "eligible actions",
     impactSource: "MVP beta",
@@ -281,6 +285,7 @@ async function main() {
         name: w.name,
         description: w.description,
         icon: w.icon,
+        color: w.color,
         impactCoef: w.impactCoef,
         impactUnit: w.impactUnit,
         impactSource: w.impactSource,

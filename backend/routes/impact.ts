@@ -307,11 +307,10 @@ router.post('/admin/impact/recalculate', async (req, res) => {
       const result = await runImpactCalculation();
       
       res.json({
-        success: result.success,
+        ...result,
         message: result.success 
           ? `Full impact recalculation completed in ${result.duration}ms`
-          : `Recalculation failed: ${result.error}`,
-        ...result
+          : `Recalculation failed: ${result.error}`
       });
     }
     
@@ -327,11 +326,10 @@ router.post('/admin/calculate-impact', async (req, res) => {
     const result = await runImpactCalculation();
     
     res.json({
-      success: result.success,
+      ...result,
       message: result.success 
         ? `Impact calculation completed in ${result.duration}ms`
-        : `Failed: ${result.error}`,
-      ...result
+        : `Failed: ${result.error}`
     });
   } catch (error) {
     console.error('Manual impact calculation failed:', error);

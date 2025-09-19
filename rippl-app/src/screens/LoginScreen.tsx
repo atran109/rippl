@@ -45,7 +45,6 @@ export default function LoginScreen({ onComplete }: LoginScreenProps) {
   };
 
   if (!showForm) {
-    // Landing screen matching Figma design
     return (
       <View className="flex-1 bg-[#2AABC8]">
         <SafeAreaView className="flex-1">

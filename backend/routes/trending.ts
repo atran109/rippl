@@ -12,6 +12,65 @@ const trendingQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(20).default(10),
 });
 
+// GET /community/stats - Get community stats (wave impact for user's primary wave)
+router.get('/community/stats', requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).userId as string;
+
+    // Get user's primary ripple to find their wave
+    const primary = await prisma.userRipple.findFirst({
+      where: { userId, isActive: true, isPrimary: true },
+      include: {
+        ripple: {
+          include: {
+            wave: {
+              select: {
+                id: true,
+                impactUnit: true,
+                impactSource: true
+              }
+            }
+          }
+        }
+      },
+    });
+
+    if (!primary?.ripple?.wave) {
+      return res.json({
+        actions_taken: 0,
+        impact_index: 0,
+      });
+    }
+
+    const waveId = primary.ripple.wave.id;
+
+    // Get cached wave impact data
+    const cached = await redis.get(`impact:wave:${waveId}:30d`);
+    if (cached) {
+      const waveData = JSON.parse(cached);
+      return res.json({
+        actions_taken: waveData.totalActions || 0,
+        impact_index: waveData.impact30d || 0,
+      });
+    }
+
+    // Fallback: get basic counts if no cached data
+    const actionsTaken = await prisma.actionLog.count({
+      where: {
+        ripple: { waveId }
+      }
+    });
+
+    res.json({
+      actions_taken: actionsTaken,
+      impact_index: 0,
+    });
+  } catch (error) {
+    console.error("Error fetching community stats:", error);
+    res.status(500).json({ error: "Failed to fetch community statistics" });
+  }
+});
+
 // GET /community/trending - Get trending ripples
 router.get('/community/trending', requireAuth, async (req, res) => {
   try {

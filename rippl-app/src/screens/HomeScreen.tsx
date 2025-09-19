@@ -14,7 +14,10 @@ import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { MicroAction, TrendingRipple } from '../lib/api';
+import type { RootStackParamList } from '../types/navigation';
 import { api } from '../lib/api';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 const DEFAULT_WAVE_BADGE_COLOR = '#2AABC8';
 interface TopBarProps {
@@ -330,114 +333,126 @@ const ActionCard: React.FC<ActionCardProps> = ({ action, onComplete }) => {
   };
 
   return (
-    <View className="mx-5 mb-6">
+    <View className="mx-5 mt-4 mb-10">
       <Text className="text-black text-xl font-semibold text-center mb-4">Today's Action</Text>
-      
+
       {/* Gradient Action Card (brand) */}
-      <View className="rounded-2xl overflow-hidden">
+      <View className="rounded-2xl overflow-hidden" style={{ minHeight: 240 }}>
         <LinearGradient
           colors={["#2AABC8", "#4EC9D9"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={{ padding: 20 }}
+          style={{
+            padding: 20,
+            paddingBottom: 24,
+            minHeight: 220
+          }}
         >
-        {/* Header with count and wave tag */}
-        <View className="flex-row items-center justify-between mb-6">
-          <View className="flex-row items-center">
-            <Text className="text-white text-base font-medium mr-1">10</Text>
-            <Ionicons name="person" size={18} color="white" />
-          </View>
-          
-          <View className="border border-white px-2 py-0.5 rounded-full">
-            <Text className="text-white text-[10px] font-medium">Mental Health</Text>
-          </View>
-        </View>
+          {/* Top Section - Header and Content */}
+          <View>
+            {/* Header with count and wave tag */}
+            <View className="flex-row items-center justify-between mb-4">
+              <View className="flex-row items-center">
+                <Text className="text-white text-base font-medium mr-1">10</Text>
+                <Ionicons name="person" size={18} color="white" />
+              </View>
 
-        {/* Action Content */}
-        <View className="mb-6">
-          <Text className="text-white text-2xl font-semibold mb-2">
-            {action.text || 'Offer a Helping Hand'}
-          </Text>
-          <Text className="text-white text-sm font-medium">
-            Offer one spontaneous act of kindness today. Carry a bag, share advice, or lend an ear... 
-            Your small gesture sends ripples of positivity farther than you think.
-          </Text>
-        </View>
-
-        {/* Dynamic Action Buttons */}
-        {cardState === 'initial' && (
-          <TouchableOpacity 
-            className="py-3 px-8 rounded-2xl self-start"
-            style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            }}
-            onPress={handleStartNow}
-          >
-            <Text className="text-[#2AABC8] text-lg font-semibold">Start now</Text>
-          </TouchableOpacity>
-        )}
-
-        {cardState === 'started' && (
-          <View className="gap-3">
-            <Text className="text-white text-center mb-2">Did you complete this action?</Text>
-            <View className="flex-row gap-3">
-              <TouchableOpacity 
-                className="flex-1 py-3 rounded-xl"
-                style={{ backgroundColor: 'rgba(255, 255, 255, 0.9)' }}
-                onPress={handleComplete}
-              >
-                <Text className="text-[#2AABC8] text-center font-semibold">Complete</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                className="flex-1 border border-white py-3 rounded-xl"
-                style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }}
-                onPress={handleAddNote}
-              >
-                <Text className="text-white text-center font-semibold">Add Note</Text>
-              </TouchableOpacity>
+              <View className="border border-white px-2 py-0.5 rounded-full">
+                <Text className="text-white text-[10px] font-medium">Mental Health</Text>
+              </View>
             </View>
-            <TouchableOpacity 
-              className="py-2 rounded-xl"
-              style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
-              onPress={handleCancel}
-            >
-              <Text className="text-white/70 text-center">Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        )}
 
-        {cardState === 'note' && (
-          <View className="gap-3">
-            <Text className="text-white text-center mb-2">Add a short note (optional)</Text>
-            <TextInput
-              className="bg-white/95 text-black px-3 py-2 rounded-xl"
-              placeholder="What did you do? (0–120 chars)"
-              placeholderTextColor="#6b7280"
-              value={note}
-              onChangeText={setNote}
-              maxLength={120}
-            />
-            <Text className="text-white/70 text-xs text-right">
-              {note.length}/120
-            </Text>
-            <View className="flex-row gap-3">
-              <TouchableOpacity 
-                className="flex-1 py-3 rounded-xl"
-                style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)' }}
-                onPress={handleCompleteWithNote}
-              >
-                <Text className="text-[#2AABC8] text-center font-semibold">Save & Complete</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                className="flex-1 border border-white py-3 rounded-xl"
-                style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }}
-                onPress={() => setCardState('started')}
-              >
-                <Text className="text-white text-center font-semibold">Back</Text>
-              </TouchableOpacity>
+            {/* Action Content */}
+            <View className="mb-4">
+              <Text className="text-white text-xl font-semibold mb-2">
+                {action.text || 'Offer a Helping Hand'}
+              </Text>
+              <Text className="text-white text-sm font-medium" numberOfLines={3}>
+                Offer one spontaneous act of kindness today. Carry a bag, share advice, or lend an ear...
+                Your small gesture sends ripples of positivity farther than you think.
+              </Text>
             </View>
           </View>
-        )}
+
+          {/* Bottom Section - Interactive Area */}
+          <View style={{ width: '100%', marginTop: 16 }}>
+            {/* Dynamic Action Buttons */}
+            {cardState === 'initial' && (
+              <TouchableOpacity
+                className="py-3 px-8 rounded-2xl self-start"
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                }}
+                onPress={handleStartNow}
+              >
+                <Text className="text-[#2AABC8] text-lg font-semibold">Start now</Text>
+              </TouchableOpacity>
+            )}
+
+            {cardState === 'started' && (
+              <View>
+                <Text className="text-white text-center mb-3">Did you complete this action?</Text>
+                <View className="flex-row gap-3 mb-2">
+                  <TouchableOpacity
+                    className="flex-1 py-3 rounded-xl"
+                    style={{ backgroundColor: 'rgba(255, 255, 255, 0.9)' }}
+                    onPress={handleComplete}
+                  >
+                    <Text className="text-[#2AABC8] text-center font-semibold">Complete</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    className="flex-1 border border-white py-3 rounded-xl"
+                    style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }}
+                    onPress={handleAddNote}
+                  >
+                    <Text className="text-white text-center font-semibold">Add Note</Text>
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                  className="py-2 rounded-xl"
+                  style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+                  onPress={handleCancel}
+                >
+                  <Text className="text-white/70 text-center">Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {cardState === 'note' && (
+              <View>
+                <Text className="text-white text-center mb-2 text-sm">Add a short note (optional)</Text>
+                <TextInput
+                  className="bg-white/95 text-black px-3 py-2 rounded-xl mb-1"
+                  placeholder="What did you do?"
+                  placeholderTextColor="#6b7280"
+                  value={note}
+                  onChangeText={setNote}
+                  maxLength={120}
+                  multiline
+                  style={{ maxHeight: 36 }}
+                />
+                <Text className="text-white/70 text-xs text-right mb-2">
+                  {note.length}/120
+                </Text>
+                <View className="flex-row gap-3">
+                  <TouchableOpacity
+                    className="flex-1 py-2 rounded-xl"
+                    style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)' }}
+                    onPress={handleCompleteWithNote}
+                  >
+                    <Text className="text-[#2AABC8] text-center font-semibold">Save & Complete</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    className="flex-1 border border-white py-2 rounded-xl"
+                    style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }}
+                    onPress={() => setCardState('started')}
+                  >
+                    <Text className="text-white text-center font-semibold">Back</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
         </LinearGradient>
       </View>
     </View>
@@ -490,9 +505,12 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, onTabCha
   );
 };
 
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
 export default function HomeScreen() {
   const [rippleTab, setRippleTab] = useState<'your' | 'trending'>('your');
   const [bottomTab, setBottomTab] = useState<'home' | 'community' | 'profile'>('home');
+  const navigation = useNavigation<NavigationProp>();
 
   // Debug logging for tab changes
   console.log('🔄 HomeScreen render, rippleTab:', rippleTab);
@@ -595,12 +613,10 @@ export default function HomeScreen() {
 
   const handleBottomTabChange = (tab: 'home' | 'community' | 'profile') => {
     setBottomTab(tab);
-    // For now, just handle tab state changes
-    // TODO: Add navigation when the navigation context issue is resolved
     if (tab === 'community') {
-      console.log('Navigate to Community');
+      navigation.navigate('Community');
     } else if (tab === 'profile') {
-      console.log('Navigate to Profile');
+      navigation.navigate('Profile');
     }
     // If home is selected, we're already on the home screen
   };
@@ -651,9 +667,6 @@ export default function HomeScreen() {
             />
           )}
         </View>
-
-        {/* Minimal spacer for better balance */}
-        <View className="flex-1 min-h-[10px]" />
 
         {/* Action Card */}
         {homeData?.today_action && (

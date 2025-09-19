@@ -18,7 +18,7 @@ export const WaveSchema = z.object({
 export const UserSchema = z.object({
   id: z.string(),
   email: z.string(),
-  username: z.string(),
+  username: z.string().optional(),
   dream: z.string().nullable(),
   createdAt: z.string(),
 });
@@ -35,6 +35,7 @@ export const RippleSchema = z.object({
   wave: z.object({
     id: z.string(),
     name: z.string(),
+    color: z.string().optional(),
   }),
 });
 
@@ -86,6 +87,28 @@ export const TrendingRippleSchema = z.object({
   }).nullable().optional(),
 });
 
+// New schemas for profile features
+export const PastMicroActionSchema = z.object({
+  id: z.string(),
+  action_text: z.string(),
+  wave_name: z.string(),
+  wave_color: z.string(),
+  ripple_title: z.string(),
+  note: z.string().optional().nullable(),
+  completed_at: z.string(),
+});
+
+export const ProfileStatsSchema = z.object({
+  ripples_joined: z.number(),
+  actions_taken: z.number(),
+  impact_index: z.number(),
+});
+
+export const CommunalStatsSchema = z.object({
+  actions_taken: z.number(),
+  impact_index: z.number(),
+});
+
 // Types inferred from schemas
 export type Wave = z.infer<typeof WaveSchema>;
 export type User = z.infer<typeof UserSchema>;
@@ -96,6 +119,9 @@ export type AuthResponse = z.infer<typeof AuthResponseSchema>;
 export type RegisterResponse = z.infer<typeof RegisterResponseSchema>;
 export type JoinWaveResponse = z.infer<typeof JoinWaveResponseSchema>;
 export type TrendingRipple = z.infer<typeof TrendingRippleSchema>;
+export type PastMicroActionType = z.infer<typeof PastMicroActionSchema>;
+export type ProfileStats = z.infer<typeof ProfileStatsSchema>;
+export type CommunalStats = z.infer<typeof CommunalStatsSchema>;
 
 // Auth token management
 export const getToken = async (): Promise<string | null> => {
@@ -212,6 +238,22 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ dream }),
     }, UserSchema),
+
+  updateUsername: (username: string) =>
+    fetchJson('/me/username', {
+      method: 'PUT',
+      body: JSON.stringify({ username }),
+    }, UserSchema),
+
+  // Profile stats and history
+  getPastActions: () =>
+    fetchJson('/me/actions/history', {}, z.array(PastMicroActionSchema)),
+
+  getProfileStats: () =>
+    fetchJson('/me/stats', {}, ProfileStatsSchema),
+
+  getCommunalStats: () =>
+    fetchJson('/community/stats', {}, CommunalStatsSchema),
 
   // Actions
   generateAction: () =>
